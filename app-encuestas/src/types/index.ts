@@ -11,6 +11,7 @@ export interface Area {
   nombre: string;
   slug: string;
   descripcion?: string | null;
+  imagenUrl?: string | null;
   activa?: boolean;
   preguntas?: Pregunta[];
   colaboradores?: Colaborador[];
@@ -21,7 +22,7 @@ export interface Colaborador {
   nombre: string;
   apellido: string;
   areaId: number;
-  activo: boolean;
+  activo?: boolean;
 }
 
 export interface Pregunta {
@@ -31,7 +32,7 @@ export interface Pregunta {
   tipo: TipoPregunta;
   orden: number;
   obligatoria: boolean;
-  activa: boolean;
+  activa?: boolean;
 }
 
 export interface Usuario {

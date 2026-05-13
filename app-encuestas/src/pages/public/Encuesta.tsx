@@ -20,20 +20,20 @@ import axios from 'axios';
 
 type FormValues = Record<string, boolean | string | number | undefined>;
 
+// El backend ya filtra activas; no re-filtrar aquí.
 function buildSchema(preguntas: Pregunta[]) {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const p of preguntas) {
     const key = `pregunta_${p.id}`;
-    if (!p.activa) continue;
     if (p.tipo === 'SI_NO' && p.obligatoria) {
       shape[key] = z.boolean({ error: 'Esta pregunta es obligatoria' });
     } else if (p.tipo === 'SI_NO') {
       shape[key] = z.boolean().optional();
     } else if (p.tipo === 'ESCALA_1_10') {
-      const base = z.number().min(1, 'Mínimo 1').max(10, 'Máximo 10');
+      const base = z.number({ error: 'Esta pregunta es obligatoria' }).min(1, 'Mínimo 1').max(10, 'Máximo 10');
       shape[key] = p.obligatoria ? base : base.optional();
     } else if (p.obligatoria) {
-      shape[key] = z.string().min(1, 'Este campo es obligatorio');
+      shape[key] = z.string({ error: 'Este campo es obligatorio' }).min(1, 'Este campo es obligatorio');
     } else {
       shape[key] = z.string().optional();
     }
@@ -58,8 +58,11 @@ export function Encuesta() {
     enabled: !!slug,
   });
 
-  const preguntas = (area?.preguntas ?? []).filter((p) => p.activa).sort((a, b) => a.orden - b.orden);
-  const colaboradores = (area?.colaboradores ?? []).filter((c) => c.activo);
+  // Backend ya devuelve solo activas/activos — no re-filtrar
+  const preguntas = [...(area?.preguntas ?? [])].sort((a, b) => a.orden - b.orden);
+  const colaboradores = area?.colaboradores ?? [];
+
+  const tieneNombreSocio = preguntas.some((p) => p.tipo === 'NOMBRE_SOCIO');
 
   const schema = buildSchema(preguntas);
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
@@ -107,7 +110,6 @@ export function Encuesta() {
     setSubmitError('');
     try {
       const respuestas: RespuestaSubmit[] = preguntas
-        .filter((p) => p.activa)
         .map((p) => {
           const val = data[`pregunta_${p.id}`];
           const r: RespuestaSubmit = { preguntaId: p.id };
@@ -142,9 +144,22 @@ export function Encuesta() {
     <PublicLayout>
       <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-10">
         <div className="w-full max-w-lg">
+          {/* Encabezado del área con imagen opcional */}
           <div className="mb-6 text-center">
+            {area.imagenUrl && (
+              <div className="mb-4 overflow-hidden rounded-xl h-32 w-full">
+                <img
+                  src={area.imagenUrl}
+                  alt={area.nombre}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+            )}
             <h1 className="text-2xl font-bold text-white">{area.nombre}</h1>
-            {area.descripcion && <p className="text-white/70 mt-1 text-sm">{area.descripcion}</p>}
+            {area.descripcion && (
+              <p className="text-white/70 mt-1 text-sm">{area.descripcion}</p>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-6 space-y-7">
@@ -224,6 +239,7 @@ export function Encuesta() {
                     />
                   );
                 }
+                // DESCRIPCION y cualquier tipo futuro
                 return (
                   <Controller
                     key={p.id}
@@ -241,22 +257,27 @@ export function Encuesta() {
                 );
               })}
 
-              {/* nombreSocio oculto si no hay pregunta NOMBRE_SOCIO */}
-              {!preguntas.some((p) => p.tipo === 'NOMBRE_SOCIO') && (
+              {/* Campo nombreSocio explícito solo si no viene como pregunta NOMBRE_SOCIO */}
+              {!tieneNombreSocio && (
                 <Controller
                   name="nombreSocio"
                   control={control}
                   render={({ field }) => (
                     <div>
+                      <label className="text-sm font-medium text-gray-700 block mb-1">
+                        Nombre del socio <span className="text-red-500">*</span>
+                      </label>
                       <input
                         {...field}
                         value={field.value as string ?? ''}
                         type="text"
-                        placeholder="Nombre del socio (requerido)"
-                        className="w-full rounded-lg border border-[#C2CFDB] px-3 py-2 text-sm"
+                        placeholder="Nombres y apellidos"
+                        className="w-full rounded-lg border border-[#C2CFDB] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#063E7B]"
                       />
                       {errors['nombreSocio'] && (
-                        <p className="text-xs text-red-600 mt-1">{errors['nombreSocio'].message as string}</p>
+                        <p className="text-xs text-red-600 mt-1">
+                          {errors['nombreSocio'].message as string}
+                        </p>
                       )}
                     </div>
                   )}

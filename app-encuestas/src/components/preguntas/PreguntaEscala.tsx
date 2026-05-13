@@ -28,13 +28,13 @@ export function PreguntaEscala({ pregunta, value, onChange, error }: PreguntaEsc
         {pregunta.texto}
         {pregunta.obligatoria && <span className="text-red-500 ml-1">*</span>}
       </p>
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="grid grid-cols-10 gap-1">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <button
             key={n}
             type="button"
             onClick={() => onChange(n)}
-            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border-2 font-bold text-sm sm:text-base transition-all ${
+            className={`aspect-square w-full rounded-lg border-2 font-bold text-sm transition-all ${
               value === n
                 ? getColorClass(n)
                 : `bg-white border-[#C2CFDB] text-gray-600 ${getHoverClass(n)}`

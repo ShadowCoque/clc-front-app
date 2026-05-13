@@ -91,7 +91,7 @@ export function GestionColaboradores() {
   });
 
   async function toggleActivo(c: Colaborador) {
-    await updateColaborador(c.id, { activo: !c.activo });
+    await updateColaborador(c.id, { activo: !(c.activo ?? true) });
     qc.invalidateQueries({ queryKey: ['colaboradores-admin'] });
   }
 
@@ -153,8 +153,8 @@ export function GestionColaboradores() {
                     <td className="px-4 py-3 text-gray-800">{c.apellido}</td>
                     <td className="px-4 py-3 text-gray-500">{getAreaNombre(c.areaId)}</td>
                     <td className="px-4 py-3 text-center">
-                      <Badge variant={c.activo ? 'success' : 'error'}>
-                        {c.activo ? 'Activo' : 'Inactivo'}
+                      <Badge variant={c.activo !== false ? 'success' : 'error'}>
+                        {c.activo !== false ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
@@ -164,10 +164,10 @@ export function GestionColaboradores() {
                         </Button>
                         <Button
                           size="sm"
-                          variant={c.activo ? 'danger' : 'secondary'}
+                          variant={c.activo !== false ? 'danger' : 'secondary'}
                           onClick={() => toggleActivo(c)}
                         >
-                          {c.activo ? 'Desactivar' : 'Activar'}
+                          {c.activo !== false ? 'Desactivar' : 'Activar'}
                         </Button>
                       </div>
                     </td>

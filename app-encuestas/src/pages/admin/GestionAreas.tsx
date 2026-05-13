@@ -236,14 +236,14 @@ function AreaRow({ area }: { area: Area }) {
                       <div className="flex gap-2 mt-1 flex-wrap">
                         <Badge variant="info">{TIPOS_PREGUNTA.find((t) => t.value === p.tipo)?.label ?? p.tipo}</Badge>
                         {p.obligatoria && <Badge variant="warning">Obligatoria</Badge>}
-                        <Badge variant={p.activa ? 'success' : 'error'}>{p.activa ? 'Activa' : 'Inactiva'}</Badge>
+                        <Badge variant={p.activa !== false ? 'success' : 'error'}>{p.activa !== false ? 'Activa' : 'Inactiva'}</Badge>
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
                       <Button size="sm" variant="ghost" onClick={() => { setPreguntaEditar(p); setModalPregunta(true); }}>
                         <PencilIcon className="w-3.5 h-3.5" />
                       </Button>
-                      {p.activa && (
+                      {p.activa !== false && (
                         <Button size="sm" variant="danger" onClick={() => desactivarPregunta(p)}>
                           Desactivar
                         </Button>
