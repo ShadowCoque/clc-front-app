@@ -1,0 +1,285 @@
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useForm, Controller, type Resolver } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { getAreaBySlug } from '../../api/areas';
+import { submitEncuesta } from '../../api/encuestas';
+import { PublicLayout } from '../../layouts/PublicLayout';
+import { PreguntaSiNo } from '../../components/preguntas/PreguntaSiNo';
+import { PreguntaDescripcion } from '../../components/preguntas/PreguntaDescripcion';
+import { PreguntaNombreSocio } from '../../components/preguntas/PreguntaNombreSocio';
+import { PreguntaEscala } from '../../components/preguntas/PreguntaEscala';
+import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { Spinner } from '../../components/ui/Spinner';
+import { ErrorState } from '../../components/ui/ErrorState';
+import type { Pregunta, RespuestaSubmit } from '../../types';
+import axios from 'axios';
+
+type FormValues = Record<string, boolean | string | number | undefined>;
+
+function buildSchema(preguntas: Pregunta[]) {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const p of preguntas) {
+    const key = `pregunta_${p.id}`;
+    if (!p.activa) continue;
+    if (p.tipo === 'SI_NO' && p.obligatoria) {
+      shape[key] = z.boolean({ error: 'Esta pregunta es obligatoria' });
+    } else if (p.tipo === 'SI_NO') {
+      shape[key] = z.boolean().optional();
+    } else if (p.tipo === 'ESCALA_1_10') {
+      const base = z.number().min(1, 'Mínimo 1').max(10, 'Máximo 10');
+      shape[key] = p.obligatoria ? base : base.optional();
+    } else if (p.obligatoria) {
+      shape[key] = z.string().min(1, 'Este campo es obligatorio');
+    } else {
+      shape[key] = z.string().optional();
+    }
+  }
+  shape['nombreSocio'] = z.string().min(1, 'El nombre del socio es obligatorio');
+  return z.object(shape);
+}
+
+export function Encuesta() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const slug = params.get('area') ?? '';
+  const colaboradorParam = params.get('colaborador');
+
+  const [colaboradorId, setColaboradorId] = useState<string>(colaboradorParam ?? '');
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const { data: area, isLoading, isError } = useQuery({
+    queryKey: ['area-slug', slug],
+    queryFn: () => getAreaBySlug(slug),
+    enabled: !!slug,
+  });
+
+  const preguntas = (area?.preguntas ?? []).filter((p) => p.activa).sort((a, b) => a.orden - b.orden);
+  const colaboradores = (area?.colaboradores ?? []).filter((c) => c.activo);
+
+  const schema = buildSchema(preguntas);
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema) as Resolver<FormValues>,
+  });
+
+  useEffect(() => {
+    if (colaboradores.length === 1) setColaboradorId(String(colaboradores[0].id));
+  }, [area]);
+
+  if (!slug) {
+    return (
+      <PublicLayout>
+        <div className="flex-1 flex items-center justify-center">
+          <ErrorState title="URL inválida" description="No se especificó un área." />
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <PublicLayout>
+        <div className="flex-1 flex items-center justify-center">
+          <Spinner size="lg" className="text-white" />
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  if (isError || !area) {
+    return (
+      <PublicLayout>
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl p-6">
+            <ErrorState title="Área no encontrada" description="El enlace puede estar desactualizado." />
+          </div>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  async function onSubmit(data: FormValues) {
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const respuestas: RespuestaSubmit[] = preguntas
+        .filter((p) => p.activa)
+        .map((p) => {
+          const val = data[`pregunta_${p.id}`];
+          const r: RespuestaSubmit = { preguntaId: p.id };
+          if (p.tipo === 'SI_NO' && val !== undefined) r.valorBooleano = val as boolean;
+          else if (p.tipo === 'ESCALA_1_10' && val !== undefined) r.valorNumero = val as number;
+          else if (val !== undefined && val !== '') r.valorTexto = String(val);
+          return r;
+        })
+        .filter((r) => r.valorBooleano !== undefined || r.valorTexto !== undefined || r.valorNumero !== undefined);
+
+      await submitEncuesta({
+        areaId: area!.id,
+        ...(colaboradorId ? { colaboradorId: Number(colaboradorId) } : {}),
+        nombreSocio: String(data['nombreSocio'] ?? ''),
+        respuestas,
+      });
+      navigate('/gracias');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        setSubmitError('Ya enviaste una encuesta para esta área hoy. ¡Gracias por tu participación!');
+      } else if (axios.isAxiosError(err) && err.response?.status === 400) {
+        setSubmitError('Por favor revisa los datos ingresados e inténtalo nuevamente.');
+      } else {
+        setSubmitError('Ocurrió un error al enviar. Inténtalo nuevamente.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <PublicLayout>
+      <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-10">
+        <div className="w-full max-w-lg">
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl font-bold text-white">{area.nombre}</h1>
+            {area.descripcion && <p className="text-white/70 mt-1 text-sm">{area.descripcion}</p>}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl p-6 space-y-7">
+            {/* Selección de colaborador */}
+            {colaboradores.length > 1 && (
+              <Select
+                label="¿Quién le atendió?"
+                value={colaboradorId}
+                onChange={(e) => setColaboradorId(e.target.value)}
+                placeholder="Selecciona un colaborador"
+                disabled={!!colaboradorParam}
+              >
+                {colaboradores.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre} {c.apellido}
+                  </option>
+                ))}
+              </Select>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
+              {preguntas.map((p) => {
+                const key = `pregunta_${p.id}` as const;
+                const error = errors[key]?.message as string | undefined;
+
+                if (p.tipo === 'SI_NO') {
+                  return (
+                    <Controller
+                      key={p.id}
+                      name={key}
+                      control={control}
+                      render={({ field }) => (
+                        <PreguntaSiNo
+                          pregunta={p}
+                          value={field.value as boolean | undefined}
+                          onChange={(v) => field.onChange(v)}
+                          error={error}
+                        />
+                      )}
+                    />
+                  );
+                }
+                if (p.tipo === 'ESCALA_1_10') {
+                  return (
+                    <Controller
+                      key={p.id}
+                      name={key}
+                      control={control}
+                      render={({ field }) => (
+                        <PreguntaEscala
+                          pregunta={p}
+                          value={field.value as number | undefined}
+                          onChange={(v) => field.onChange(v)}
+                          error={error}
+                        />
+                      )}
+                    />
+                  );
+                }
+                if (p.tipo === 'NOMBRE_SOCIO') {
+                  return (
+                    <Controller
+                      key={p.id}
+                      name={key}
+                      control={control}
+                      render={({ field }) => (
+                        <PreguntaNombreSocio
+                          pregunta={p}
+                          value={field.value as string | undefined}
+                          onChange={(v) => {
+                            field.onChange(v);
+                            setValue('nombreSocio', v);
+                          }}
+                          error={error}
+                        />
+                      )}
+                    />
+                  );
+                }
+                return (
+                  <Controller
+                    key={p.id}
+                    name={key}
+                    control={control}
+                    render={({ field }) => (
+                      <PreguntaDescripcion
+                        pregunta={p}
+                        value={field.value as string | undefined}
+                        onChange={(v) => field.onChange(v)}
+                        error={error}
+                      />
+                    )}
+                  />
+                );
+              })}
+
+              {/* nombreSocio oculto si no hay pregunta NOMBRE_SOCIO */}
+              {!preguntas.some((p) => p.tipo === 'NOMBRE_SOCIO') && (
+                <Controller
+                  name="nombreSocio"
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <input
+                        {...field}
+                        value={field.value as string ?? ''}
+                        type="text"
+                        placeholder="Nombre del socio (requerido)"
+                        className="w-full rounded-lg border border-[#C2CFDB] px-3 py-2 text-sm"
+                      />
+                      {errors['nombreSocio'] && (
+                        <p className="text-xs text-red-600 mt-1">{errors['nombreSocio'].message as string}</p>
+                      )}
+                    </div>
+                  )}
+                />
+              )}
+
+              {submitError && (
+                <div className={`rounded-lg px-4 py-3 text-sm ${
+                  submitError.includes('Ya enviaste')
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  {submitError}
+                </div>
+              )}
+
+              <Button type="submit" size="lg" loading={submitting} className="w-full">
+                Enviar calificación
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </PublicLayout>
+  );
+}
