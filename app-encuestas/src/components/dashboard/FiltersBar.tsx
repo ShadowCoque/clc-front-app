@@ -20,6 +20,8 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [nombreSocio, setNombreSocio] = useState('');
+  // Forzar re-mount de inputs de fecha al limpiar
+  const [dateKey, setDateKey] = useState(0);
 
   const { data: areas = [] } = useQuery({ queryKey: ['areas'], queryFn: getAreas });
   const { data: colaboradores = [] } = useQuery({
@@ -47,6 +49,7 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
     setFechaDesde('');
     setFechaHasta('');
     setNombreSocio('');
+    setDateKey((k) => k + 1); // fuerza re-mount de los date inputs
     onFilter({});
   }
 
@@ -67,8 +70,20 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
             <option key={c.id} value={c.id}>{c.nombre} {c.apellido}</option>
           ))}
         </Select>
-        <Input type="date" label="Desde" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
-        <Input type="date" label="Hasta" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
+        <Input
+          key={`desde-${dateKey}`}
+          type="date"
+          label="Desde"
+          defaultValue=""
+          onChange={(e) => setFechaDesde(e.target.value)}
+        />
+        <Input
+          key={`hasta-${dateKey}`}
+          type="date"
+          label="Hasta"
+          defaultValue=""
+          onChange={(e) => setFechaHasta(e.target.value)}
+        />
         <Input
           label="Nombre socio"
           value={nombreSocio}

@@ -8,16 +8,14 @@ interface PreguntaEscalaProps {
 }
 
 function getColorClass(n: number): string {
-  if (n <= 4) return 'bg-red-500 text-white border-red-500';
-  if (n <= 6) return 'bg-amber-400 text-white border-amber-400';
-  if (n <= 8) return 'bg-yellow-400 text-white border-yellow-400';
+  if (n <= 6) return 'bg-red-500 text-white border-red-500';
+  if (n <= 8) return 'bg-amber-400 text-white border-amber-400';
   return 'bg-green-500 text-white border-green-500';
 }
 
 function getHoverClass(n: number): string {
-  if (n <= 4) return 'hover:border-red-400 hover:text-red-600';
-  if (n <= 6) return 'hover:border-amber-400 hover:text-amber-600';
-  if (n <= 8) return 'hover:border-yellow-400 hover:text-yellow-600';
+  if (n <= 6) return 'hover:border-red-400 hover:text-red-600';
+  if (n <= 8) return 'hover:border-amber-400 hover:text-amber-600';
   return 'hover:border-green-400 hover:text-green-600';
 }
 
