@@ -84,10 +84,15 @@ export function GestionColaboradores() {
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState<Colaborador | undefined>();
 
-  const { data: areas = [] } = useQuery({ queryKey: ['areas'], queryFn: getAreas });
+  const { data: areas = [], isSuccess: areasLoaded } = useQuery({ queryKey: ['areas'], queryFn: getAreas });
   const { data: colaboradores = [], isLoading } = useQuery({
     queryKey: ['colaboradores-admin', areaFiltro],
-    queryFn: () => getColaboradores(areaFiltro ? Number(areaFiltro) : undefined),
+    enabled: areasLoaded,
+    queryFn: async () => {
+      if (areaFiltro) return getColaboradores(Number(areaFiltro));
+      const results = await Promise.all(areas.map((a) => getColaboradores(a.id)));
+      return results.flat().sort((a, b) => a.apellido.localeCompare(b.apellido));
+    },
   });
 
   async function toggleActivo(c: Colaborador) {

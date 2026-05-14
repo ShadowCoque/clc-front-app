@@ -8,6 +8,17 @@ interface EncuestasTableProps {
   encuestas: EncuestaReporte[];
   meta?: PaginacionMeta;
   onPageChange: (page: number) => void;
+  preguntaMap?: Record<number, string>;
+}
+
+function getTextoPregunta(resp: import('../../types').RespuestaReporte, map?: Record<number, string>): string {
+  if (resp.textoPregunta) return resp.textoPregunta;
+  if (map?.[resp.preguntaId]) return map[resp.preguntaId];
+  if (resp.tipo === 'NOMBRE_SOCIO') return 'Nombre del socio';
+  if (resp.tipo === 'DESCRIPCION') return 'Comentario';
+  if (resp.tipo === 'ESCALA_1_10') return 'Calificación (1–10)';
+  if (resp.tipo === 'SI_NO') return `Pregunta SI/NO #${resp.preguntaId}`;
+  return `Pregunta #${resp.preguntaId}`;
 }
 
 function getColaboradorNombre(e: EncuestaReporte): string {
@@ -49,7 +60,7 @@ function paginationText(meta: PaginacionMeta): string {
   return `Página ${meta.page} de ${meta.totalPages} — Mostrándose ${desde}–${hasta} de ${meta.total} resultados`;
 }
 
-export function EncuestasTable({ encuestas, meta, onPageChange }: EncuestasTableProps) {
+export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: EncuestasTableProps) {
   const [detalle, setDetalle] = useState<EncuestaReporte | null>(null);
 
   if (!encuestas.length) return <EmptyState title="Sin encuestas" description="No hay encuestas con los filtros aplicados." />;
@@ -174,7 +185,7 @@ export function EncuestasTable({ encuestas, meta, onPageChange }: EncuestasTable
                 detalle.respuestas.map((resp) => (
                   <div key={resp.preguntaId} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-                      {resp.textoPregunta ?? `Pregunta #${resp.preguntaId}`}
+                      {getTextoPregunta(resp, preguntaMap)}
                     </p>
                     {/* SI/NO */}
                     {resp.valorBooleano != null && (

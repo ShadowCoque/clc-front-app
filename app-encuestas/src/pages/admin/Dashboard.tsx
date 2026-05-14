@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardListIcon, StarIcon, TrendingUpIcon, MessageSquareIcon, ThumbsUpIcon } from 'lucide-react';
 import { getResumen, getEncuestas, exportarExcel } from '../../api/reportes';
+import { getPreguntas } from '../../api/preguntas';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { FiltersBar } from '../../components/dashboard/FiltersBar';
 import { KpiCard } from '../../components/dashboard/KpiCard';
@@ -15,7 +16,6 @@ import type { ReporteFiltros } from '../../types';
 export function Dashboard() {
   const [filtros, setFiltros] = useState<ReporteFiltros>({});
   const [encuestasPage, setEncuestasPage] = useState(1);
-  const [comentariosPage, setComentariosPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [tab, setTab] = useState<'encuestas' | 'comentarios'>('encuestas');
 
@@ -29,15 +29,26 @@ export function Dashboard() {
     queryFn: () => getEncuestas({ ...filtros, page: encuestasPage, limit: 20 }),
   });
 
-  const { data: comentariosData, isLoading: loadingComentarios } = useQuery({
-    queryKey: ['encuestas-comentarios', filtros, comentariosPage],
-    queryFn: () => getEncuestas({ ...filtros, page: comentariosPage, limit: 20 }),
+  const areaIds = useMemo(
+    () => (resumen?.areas ?? []).map((a) => a.areaId).sort((a, b) => a - b),
+    [resumen],
+  );
+
+  const { data: todasPreguntas = [] } = useQuery({
+    queryKey: ['preguntas-dashboard', areaIds],
+    queryFn: () => Promise.all(areaIds.map(getPreguntas)).then((r) => r.flat()),
+    enabled: areaIds.length > 0,
+    staleTime: 5 * 60 * 1000,
   });
+
+  const preguntaMap = useMemo<Record<number, string>>(
+    () => Object.fromEntries(todasPreguntas.map((p) => [p.id, p.texto])),
+    [todasPreguntas],
+  );
 
   function handleFilter(f: ReporteFiltros) {
     setFiltros(f);
     setEncuestasPage(1);
-    setComentariosPage(1);
   }
 
   async function handleExport() {
@@ -123,16 +134,16 @@ export function Dashboard() {
                 encuestas={encuestasData?.data ?? []}
                 meta={encuestasData?.meta}
                 onPageChange={setEncuestasPage}
+                preguntaMap={preguntaMap}
               />
             )
           ) : (
-            loadingComentarios ? (
+            loadingResumen ? (
               <div className="flex justify-center py-10"><Spinner className="text-[#063E7B]" /></div>
             ) : (
               <ComentariosTable
-                encuestas={comentariosData?.data ?? []}
-                meta={comentariosData?.meta}
-                onPageChange={setComentariosPage}
+                key={JSON.stringify(filtros)}
+                comentarios={resumen?.respuestasTexto ?? []}
               />
             )
           )}
