@@ -67,60 +67,81 @@ export interface LoginResponse {
 
 // ─── Reportes ─────────────────────────────────────────────────────────────────
 
+export interface ResumenEscala {
+  preguntaId?: number;
+  pregunta?: string;
+  totalRespuestas: number;
+  promedio: number | null;
+  minimo: number | null;
+  maximo: number | null;
+  distribucion: Record<string, number>;
+  detractores: number;
+  pasivos: number;
+  promotores: number;
+  porcentajeDetractores: number;
+  porcentajePromotores: number;
+  npsAproximado: number | null;
+}
+
 export interface ResumenSiNo {
   preguntaId: number;
   texto: string;
   totalSi: number;
   totalNo: number;
+  total: number;
   porcentajeSi: number;
   porcentajeNo: number;
-}
-
-export interface ResumenEscala {
-  preguntaId?: number;
-  texto?: string;
-  promedio: number;
-  total: number;
-  distribucion?: Record<string, number>;
-  nps?: number;
-}
-
-export interface RespuestaTexto {
-  preguntaId?: number;
-  texto?: string;
-  valor: string;
+  porcentajeSatisfaccion: number;
 }
 
 export interface ColaboradorResumen {
   colaboradorId: number;
   nombre: string;
   apellido: string;
+  areaId: number;
+  areaNombre: string;
   totalEncuestas: number;
-  promedioEscala?: number;
-  porcentajeSatisfaccion?: number;
+  promedioEscala: number | null;
+  nps: number | null;
+  porcentajeSatisfaccion: number | null;
+  totalComentarios: number;
+  promotores: number;
+  pasivos: number;
+  detractores: number;
 }
 
 export interface AreaResumen {
   areaId: number;
   nombre: string;
   totalEncuestas: number;
-  promedioEscala?: number;
+  promedioEscala: number | null;
+  nps: number | null;
+  porcentajeSatisfaccion: number | null;
+  totalComentarios: number;
+}
+
+export interface RespuestaTexto {
+  fecha: string;
+  hora: string;
+  area: string;
+  colaborador: string | null;
+  nombreSocio: string;
+  texto: string;
+  escala?: number | null;
+  clasificacion?: string;
 }
 
 export interface ReporteResumen {
-  totalEncuestas?: number;
-  promedioEscala?: number;
-  nps?: number;
-  porcentajeSatisfaccion?: number;
-  totalComentarios?: number;
-  preguntasSiNo?: ResumenSiNo[];
-  resumenSiNo?: ResumenSiNo[];
-  escalas?: ResumenEscala[];
-  resumenEscala?: ResumenEscala;
-  respuestasTexto?: RespuestaTexto[];
-  colaboradores?: ColaboradorResumen[];
-  areas?: AreaResumen[];
-  [key: string]: unknown;
+  totalEncuestas: number;
+  promedioEscala: number | null;
+  nps: number | null;
+  porcentajeSatisfaccion: number | null;
+  totalComentarios: number;
+  resumenEscala: ResumenEscala | null;
+  preguntasSiNo: ResumenSiNo[];
+  colaboradores: ColaboradorResumen[];
+  areas: AreaResumen[];
+  respuestasTexto: RespuestaTexto[];
 }
 
 export interface RespuestaReporte {
@@ -175,6 +196,7 @@ export interface CreateAreaDto {
   nombre: string;
   slug: string;
   descripcion?: string;
+  imagenUrl?: string;
   activa?: boolean;
 }
 

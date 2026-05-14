@@ -22,6 +22,7 @@ const areaSchema = z.object({
   nombre: z.string().min(1, 'Requerido'),
   slug: z.string().min(1, 'Requerido').regex(/^[a-z0-9-]+$/, 'Solo letras minúsculas, números y guiones'),
   descripcion: z.string().optional(),
+  imagenUrl: z.string().optional(),
   activa: z.boolean().optional(),
 });
 type AreaForm = z.infer<typeof areaSchema>;
@@ -51,15 +52,16 @@ function ModalArea({ area, onClose }: { area?: Area; onClose: () => void }) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<AreaForm>({
     resolver: zodResolver(areaSchema),
     defaultValues: area
-      ? { nombre: area.nombre, slug: area.slug, descripcion: area.descripcion ?? '', activa: area.activa }
+      ? { nombre: area.nombre, slug: area.slug, descripcion: area.descripcion ?? '', imagenUrl: area.imagenUrl ?? '', activa: area.activa }
       : { activa: true },
   });
 
   async function onSubmit(data: AreaForm) {
+    const payload = { ...data, imagenUrl: data.imagenUrl?.trim() || undefined };
     if (isEdit) {
-      await updateArea(area.id, data);
+      await updateArea(area.id, payload);
     } else {
-      await createArea(data);
+      await createArea(payload);
     }
     qc.invalidateQueries({ queryKey: ['areas-admin'] });
     onClose();
@@ -75,6 +77,14 @@ function ModalArea({ area, onClose }: { area?: Area; onClose: () => void }) {
           <Input label="Nombre" {...register('nombre')} error={errors.nombre?.message} />
           <Input label="Slug" {...register('slug')} placeholder="ej: restaurante" error={errors.slug?.message} />
           <Textarea label="Descripción" {...register('descripcion')} />
+          <div>
+            <Input
+              label="Imagen del área (URL o ruta)"
+              {...register('imagenUrl')}
+              placeholder="/areas/cafeteria.jpg"
+            />
+            <p className="text-xs text-gray-400 mt-1">Puede ser una ruta pública del frontend o una URL completa. Opcional.</p>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" {...register('activa')} className="rounded" />
             Activa
@@ -195,6 +205,14 @@ function AreaRow({ area }: { area: Area }) {
           <button onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-[#063E7B] transition-colors">
             {expanded ? <ChevronUpIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
           </button>
+          {area.imagenUrl && (
+            <img
+              src={area.imagenUrl}
+              alt={area.nombre}
+              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-[#C2CFDB]"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-[#063E7B]">{area.nombre}</span>
@@ -202,6 +220,7 @@ function AreaRow({ area }: { area: Area }) {
               <span className="text-xs text-gray-400 font-mono">{area.slug}</span>
             </div>
             {area.descripcion && <p className="text-sm text-gray-400 mt-0.5 truncate">{area.descripcion}</p>}
+            {area.imagenUrl && <p className="text-xs text-gray-300 mt-0.5 truncate font-mono">{area.imagenUrl}</p>}
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Button size="sm" variant="ghost" onClick={() => setModalArea(true)}>

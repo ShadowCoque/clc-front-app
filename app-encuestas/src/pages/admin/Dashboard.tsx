@@ -45,38 +45,11 @@ export function Dashboard() {
     try { await exportarExcel(filtros); } finally { setExporting(false); }
   }
 
-  // ─── KPIs — resolución defensiva con optional chaining ─────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const r = resumen as any;
-
-  const totalEncuestas: number = r?.totalEncuestas ?? 0;
-
-  const promedioEscala: number | null =
-    r?.promedioEscala ??
-    r?.resumenEscala?.promedio ??
-    r?.escalas?.[0]?.promedio ??
-    null;
-
-  const npsVal: number | null =
-    r?.nps ??
-    r?.resumenEscala?.nps ??
-    r?.escalas?.[0]?.nps ??
-    null;
-
-  let satisfaccion: number | null = r?.porcentajeSatisfaccion ?? null;
-  if (satisfaccion == null && r != null) {
-    const siNoArr: Array<{ totalSi: number; totalNo: number }> =
-      r?.preguntasSiNo ?? r?.resumenSiNo ?? [];
-    if (siNoArr.length > 0) {
-      const si = siNoArr.reduce((s: number, p: { totalSi: number }) => s + (Number(p.totalSi) || 0), 0);
-      const tot = siNoArr.reduce((s: number, p: { totalSi: number; totalNo: number }) => s + (Number(p.totalSi) || 0) + (Number(p.totalNo) || 0), 0);
-      if (tot > 0) satisfaccion = (si / tot) * 100;
-    }
-  }
-
-  const totalComentarios: number =
-    r?.totalComentarios ??
-    (Array.isArray(r?.respuestasTexto) ? (r.respuestasTexto as unknown[]).length : 0);
+  const totalEncuestas = resumen?.totalEncuestas ?? 0;
+  const promedioEscala = resumen?.promedioEscala ?? null;
+  const npsVal = resumen?.nps ?? null;
+  const satisfaccion = resumen?.porcentajeSatisfaccion ?? null;
+  const totalComentarios = resumen?.totalComentarios ?? 0;
 
   return (
     <AdminLayout>
@@ -99,19 +72,19 @@ export function Dashboard() {
               <KpiCard label="Total encuestas" value={totalEncuestas} icon={ClipboardListIcon} />
               <KpiCard
                 label="Promedio escala"
-                value={promedioEscala != null ? promedioEscala.toFixed(1) : '—'}
+                value={promedioEscala != null ? promedioEscala.toFixed(2) : 'N/A'}
                 icon={StarIcon}
                 color="#D0A23E"
               />
               <KpiCard
                 label="NPS"
-                value={npsVal != null ? Math.round(npsVal).toString() : '—'}
+                value={npsVal != null ? npsVal.toFixed(2) : 'N/A'}
                 icon={TrendingUpIcon}
                 color="#22c55e"
               />
               <KpiCard
                 label="% Satisfacción"
-                value={satisfaccion != null ? `${Math.round(satisfaccion)}%` : '—'}
+                value={satisfaccion != null ? `${satisfaccion.toFixed(2)}%` : 'N/A'}
                 icon={ThumbsUpIcon}
                 color="#16a34a"
               />
