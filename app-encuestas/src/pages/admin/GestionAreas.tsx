@@ -193,17 +193,22 @@ function AreaRow({ area }: { area: Area }) {
     enabled: expanded,
   });
 
+  // Cargamos colaboradores siempre — necesario para bloquear el botón "Activar"
   const { data: colaboradores = [], isLoading: loadingColabs } = useQuery({
     queryKey: ['colaboradores-area', area.id],
     queryFn: () => getColaboradores(area.id),
-    enabled: expanded,
   });
 
   const colaboradoresActivos = colaboradores.filter((c) => c.activo !== false).length;
+  const sinColaboradoresActivos = !loadingColabs && colaboradoresActivos === 0;
   const esActiva = area.activa !== false;
-  const mostrarAdvertencia = expanded && !loadingColabs && esActiva && colaboradoresActivos === 0;
+  // Mientras el área esté activa pero sin colaboradores, dejamos un aviso ámbar arriba (la encuesta sigue cargando preguntas).
+  // Cuando esté inactiva por la misma razón, el aviso pasa a rojo y bloquea la activación.
+  const mostrarAdvertenciaAmbar = expanded && esActiva && sinColaboradoresActivos;
+  const bloquearActivacion = !esActiva && sinColaboradoresActivos;
 
   async function toggleArea() {
+    if (bloquearActivacion) return;
     await updateArea(area.id, { activa: !esActiva });
     qc.invalidateQueries({ queryKey: ['areas-admin'] });
   }
@@ -220,7 +225,33 @@ function AreaRow({ area }: { area: Area }) {
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm">
+      <div
+        className={`rounded-xl border shadow-sm ${
+          bloquearActivacion
+            ? 'bg-red-50/40 border-red-200'
+            : 'bg-white border-[#C2CFDB]'
+        }`}
+      >
+        {bloquearActivacion && (
+          <div className="border-b border-red-200 bg-red-50 rounded-t-xl px-4 py-3 flex items-start gap-3">
+            <AlertTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <p className="font-medium text-red-700">
+                Esta área no puede activarse todavía porque no tiene colaboradores asignados.
+              </p>
+              <p className="text-red-600/80 mt-0.5">
+                Crea al menos un colaborador para poder mostrarla a los socios.
+              </p>
+              <Link
+                to={`/gestion-clc/colaboradores?areaId=${area.id}&nuevo=1`}
+                className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-[#063E7B] text-white rounded-lg text-xs font-medium hover:bg-[#052f5e] transition-colors"
+              >
+                <UsersIcon className="w-3.5 h-3.5" />
+                Crear colaborador
+              </Link>
+            </div>
+          </div>
+        )}
         <div className="flex items-center gap-3 p-4">
           <button onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-[#063E7B] transition-colors">
             {expanded ? <ChevronUpIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
@@ -246,7 +277,13 @@ function AreaRow({ area }: { area: Area }) {
             <Button size="sm" variant="ghost" onClick={() => setModalArea(true)}>
               <PencilIcon className="w-3.5 h-3.5" />
             </Button>
-            <Button size="sm" variant={esActiva ? 'danger' : 'secondary'} onClick={toggleArea}>
+            <Button
+              size="sm"
+              variant={esActiva ? 'danger' : 'secondary'}
+              onClick={toggleArea}
+              disabled={bloquearActivacion}
+              title={bloquearActivacion ? 'Asigna al menos un colaborador para activar esta área' : undefined}
+            >
               {esActiva ? 'Desactivar' : 'Activar'}
             </Button>
           </div>
@@ -254,17 +291,17 @@ function AreaRow({ area }: { area: Area }) {
 
         {expanded && (
           <div className="border-t border-[#C2CFDB] p-4 space-y-4">
-            {mostrarAdvertencia && (
+            {mostrarAdvertenciaAmbar && (
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
                 <AlertTriangleIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 text-sm text-amber-900">
                   <p className="font-medium">Esta área está activa, pero no aparecerá correctamente para los socios hasta que asignes al menos un colaborador activo.</p>
                   <Link
-                    to={`/gestion-clc/colaboradores?areaId=${area.id}`}
+                    to={`/gestion-clc/colaboradores?areaId=${area.id}&nuevo=1`}
                     className="inline-flex items-center gap-1 mt-2 text-amber-700 hover:text-amber-900 font-medium underline"
                   >
                     <UsersIcon className="w-3.5 h-3.5" />
-                    Ir a Colaboradores
+                    Crear colaborador
                   </Link>
                 </div>
               </div>

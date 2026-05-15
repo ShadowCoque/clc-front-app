@@ -23,6 +23,7 @@ type FormValues = Record<string, boolean | string | number | undefined>;
 // El backend ya filtra activas; no re-filtrar aquí.
 function buildSchema(preguntas: Pregunta[]) {
   const shape: Record<string, z.ZodTypeAny> = {};
+  const tieneNombreSocio = preguntas.some((p) => p.tipo === 'NOMBRE_SOCIO');
   for (const p of preguntas) {
     const key = `pregunta_${p.id}`;
     if (p.tipo === 'SI_NO' && p.obligatoria) {
@@ -38,7 +39,11 @@ function buildSchema(preguntas: Pregunta[]) {
       shape[key] = z.string().optional();
     }
   }
-  shape['nombreSocio'] = z.string().min(1, 'El nombre del socio es obligatorio');
+  // Solo se valida nombreSocio si el admin configuró la pregunta NOMBRE_SOCIO.
+  // Si no, el frontend envía 'Anónimo' al backend (campo requerido en el payload).
+  shape['nombreSocio'] = tieneNombreSocio
+    ? z.string().min(1, 'El nombre del socio es obligatorio')
+    : z.string().optional();
   return z.object(shape);
 }
 
@@ -61,8 +66,6 @@ export function Encuesta() {
   // Backend ya devuelve solo activas/activos — no re-filtrar
   const preguntas = [...(area?.preguntas ?? [])].sort((a, b) => a.orden - b.orden);
   const colaboradores = area?.colaboradores ?? [];
-
-  const tieneNombreSocio = preguntas.some((p) => p.tipo === 'NOMBRE_SOCIO');
 
   const schema = buildSchema(preguntas);
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
@@ -105,6 +108,21 @@ export function Encuesta() {
     );
   }
 
+  if (area.activa === false) {
+    return (
+      <PublicLayout>
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl p-6 max-w-md">
+            <ErrorState
+              title="Área no disponible"
+              description="Esta área no está aceptando encuestas en este momento."
+            />
+          </div>
+        </div>
+      </PublicLayout>
+    );
+  }
+
   async function onSubmit(data: FormValues) {
     setSubmitting(true);
     setSubmitError('');
@@ -120,10 +138,11 @@ export function Encuesta() {
         })
         .filter((r) => r.valorBooleano !== undefined || r.valorTexto !== undefined || r.valorNumero !== undefined);
 
+      const nombreSocioRaw = String(data['nombreSocio'] ?? '').trim();
       await submitEncuesta({
         areaId: area!.id,
         ...(colaboradorId ? { colaboradorId: Number(colaboradorId) } : {}),
-        nombreSocio: String(data['nombreSocio'] ?? ''),
+        nombreSocio: nombreSocioRaw || 'Anónimo',
         respuestas,
       });
       navigate('/gracias');
@@ -256,33 +275,6 @@ export function Encuesta() {
                   />
                 );
               })}
-
-              {/* Campo nombreSocio explícito solo si no viene como pregunta NOMBRE_SOCIO */}
-              {!tieneNombreSocio && (
-                <Controller
-                  name="nombreSocio"
-                  control={control}
-                  render={({ field }) => (
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 block mb-1">
-                        Nombre del socio <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        {...field}
-                        value={field.value as string ?? ''}
-                        type="text"
-                        placeholder="Nombres y apellidos"
-                        className="w-full rounded-lg border border-[#C2CFDB] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#063E7B]"
-                      />
-                      {errors['nombreSocio'] && (
-                        <p className="text-xs text-red-600 mt-1">
-                          {errors['nombreSocio'].message as string}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                />
-              )}
 
               {submitError && (
                 <div className={`rounded-lg px-4 py-3 text-sm ${

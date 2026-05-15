@@ -1,21 +1,27 @@
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import type { ReporteResumen } from '../../types';
 import { getAreaShortName } from '../../utils/areaLabels';
 
-const COLORS_NPS = ['#22c55e', '#facc15', '#ef4444'];
-const COLORS_DIST: Record<string, string> = {
-  red: '#ef4444',
-  amber: '#f59e0b',
-  green: '#22c55e',
+// Paleta unificada por rango de score (1-10)
+// 0-6 = rojo, 7-8 = amarillo, 9-10 = verde
+const COLOR_RED = '#ef4444';
+const COLOR_YELLOW = '#facc15';
+const COLOR_GREEN = '#22c55e';
+const COLOR_PRIMARY = '#063E7B';
+
+const COLORS_NPS = {
+  promotores: COLOR_GREEN,
+  pasivos: COLOR_YELLOW,
+  detractores: COLOR_RED,
 };
 
 function distColor(score: number): string {
-  if (score <= 6) return COLORS_DIST.red;
-  if (score <= 8) return COLORS_DIST.amber;
-  return COLORS_DIST.green;
+  if (score <= 6) return COLOR_RED;
+  if (score <= 8) return COLOR_YELLOW;
+  return COLOR_GREEN;
 }
 
 interface Props {
@@ -29,9 +35,9 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
   // ── Dona NPS ──────────────────────────────────────────────────────────────
   const npsSegments = esc
     ? [
-        { key: 'promotores', label: 'Promotores', sub: '9-10', value: esc.promotores, color: COLORS_NPS[0] },
-        { key: 'pasivos', label: 'Pasivos', sub: '7-8', value: esc.pasivos, color: COLORS_NPS[1] },
-        { key: 'detractores', label: 'Detractores', sub: '1-6', value: esc.detractores, color: COLORS_NPS[2] },
+        { key: 'promotores', label: 'Promotores', sub: '9-10', value: esc.promotores, color: COLORS_NPS.promotores },
+        { key: 'pasivos', label: 'Pasivos', sub: '7-8', value: esc.pasivos, color: COLORS_NPS.pasivos },
+        { key: 'detractores', label: 'Detractores', sub: '1-6', value: esc.detractores, color: COLORS_NPS.detractores },
       ]
     : [];
 
@@ -39,9 +45,35 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
     name: d.label,
     value: d.value,
     color: d.color,
+    sub: d.sub,
   }));
 
   const npsVal = resumen.nps;
+
+  // Label dentro de cada porción con el número en blanco para máximo contraste
+  function renderNpsLabel(props: {
+    cx?: number; cy?: number; midAngle?: number;
+    innerRadius?: number; outerRadius?: number; value?: number;
+  }) {
+    const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value = 0 } = props;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+    const RADIAN = Math.PI / 180;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#ffffff"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={14}
+        fontWeight={700}
+      >
+        {value}
+      </text>
+    );
+  }
 
   // ── Distribución 1-10 ─────────────────────────────────────────────────────
   const distData: { score: string; cantidad: number; fill: string }[] =
@@ -65,10 +97,12 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
       const nombreCompleto = `${c.nombre} ${c.apellido}`.trim();
       const short = nombreCompleto.length > 20 ? nombreCompleto.slice(0, 20) : nombreCompleto;
       const areaAbbr = getAreaShortName(c.areaNombre);
+      const promedio = Number((c.promedioEscala ?? 0).toFixed(2));
       return {
         name: short,
         area: areaAbbr,
-        Promedio: Number((c.promedioEscala ?? 0).toFixed(2)),
+        Promedio: promedio,
+        fill: distColor(promedio),
       };
     });
 
@@ -76,56 +110,56 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* ── Dona NPS ── */}
       <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm p-5">
-        <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
           <h3 className="font-semibold text-gray-700">NPS — Promotores / Pasivos / Detractores</h3>
           {npsVal != null && (
             <span className="text-2xl font-bold text-[#063E7B]">{npsVal.toFixed(2)}</span>
           )}
         </div>
 
-        {npsPieData.length > 0 ? (
-          <>
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie
-                  data={npsPieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={95}
-                  dataKey="value"
-                  paddingAngle={2}
-                  labelLine={false}
-                  isAnimationActive={false}
-                >
-                  {npsPieData.map((d, i) => (
-                    <Cell key={i} fill={d.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => [`${v} encuestas`, '']} />
-                <Legend verticalAlign="bottom" height={24} />
-              </PieChart>
-            </ResponsiveContainer>
+        {/* Leyenda compacta con el color de cada segmento */}
+        {npsPieData.length > 0 && (
+          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-1">
+            {npsSegments.map((s) => (
+              <span key={s.key} className="inline-flex items-center gap-1.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-full inline-block"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="font-medium text-gray-600">{s.label}</span>
+                <span className="text-gray-400">({s.sub})</span>
+              </span>
+            ))}
+          </div>
+        )}
 
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              {npsSegments.map((s) => (
-                <div
-                  key={s.key}
-                  className="rounded-lg border border-[#C2CFDB] bg-gray-50 px-3 py-2 text-center"
-                >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full inline-block"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    <span className="text-xs font-medium text-gray-600">{s.label}</span>
-                  </div>
-                  <p className="text-lg font-bold text-gray-800 leading-tight">{s.value}</p>
-                  <p className="text-[10px] text-gray-400">{s.sub}</p>
-                </div>
-              ))}
-            </div>
-          </>
+        {npsPieData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={npsPieData}
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={100}
+                dataKey="value"
+                paddingAngle={2}
+                labelLine={false}
+                label={renderNpsLabel}
+                isAnimationActive={false}
+              >
+                {npsPieData.map((d, i) => (
+                  <Cell key={i} fill={d.color} stroke="#ffffff" strokeWidth={2} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(v, _name, ctx) => {
+                  const sub = (ctx?.payload as { sub?: string })?.sub;
+                  return [`${v} encuestas${sub ? ` · ${sub}` : ''}`, ctx?.payload?.name ?? ''];
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         ) : (
           <div className="h-[220px] flex flex-col items-center justify-center text-gray-400 text-sm gap-1">
             {npsVal != null ? (
@@ -157,6 +191,20 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 mt-2">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_RED }} />
+              1–6 Detractores
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_YELLOW }} />
+              7–8 Pasivos
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_GREEN }} />
+              9–10 Promotores
+            </span>
+          </div>
         </div>
       )}
 
@@ -171,9 +219,8 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Legend />
-                <Bar dataKey="Sí" fill="#22c55e" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="No" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="Sí" fill={COLOR_GREEN} radius={[0, 4, 4, 0]} />
+                <Bar dataKey="No" fill={COLOR_RED} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -188,13 +235,13 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
       {colaboradoresData.length > 0 && (
         <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm p-5 lg:col-span-2">
           <h3 className="font-semibold text-gray-700 mb-4">Promedio escala por colaborador</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={colaboradoresData} margin={{ bottom: 30 }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={colaboradoresData} margin={{ bottom: 40 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="name"
                 interval={0}
-                height={50}
+                height={56}
                 tick={(props: any) => {
                   const { x, y, payload } = props;
                   const idx = typeof payload?.index === 'number' ? payload.index : 0;
@@ -205,7 +252,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                         {payload?.value}
                       </text>
                       {item?.area && (
-                        <text x={0} y={0} dy={26} textAnchor="middle" fill="#9ca3af" fontSize={10}>
+                        <text x={0} y={0} dy={28} textAnchor="middle" fill={COLOR_PRIMARY} fontSize={10} fontWeight={600}>
                           {item.area}
                         </text>
                       )}
@@ -220,9 +267,27 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                   return area ? [`${v} (${area})`, 'Promedio'] : [`${v}`, 'Promedio'];
                 }}
               />
-              <Bar dataKey="Promedio" fill="#063E7B" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Promedio" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                {colaboradoresData.map((d, i) => (
+                  <Cell key={i} fill={d.fill} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
+          <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 mt-2">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_RED }} />
+              1–6
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_YELLOW }} />
+              7–8
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_GREEN }} />
+              9–10
+            </span>
+          </div>
         </div>
       )}
     </div>

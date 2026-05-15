@@ -13,7 +13,7 @@ export function SeleccionArea() {
     queryFn: getAreas,
   });
 
-  const areas$ = areas ?? [];
+  const areas$ = (areas ?? []).filter((a) => a.activa !== false);
 
   return (
     <PublicLayout>

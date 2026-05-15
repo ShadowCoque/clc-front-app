@@ -5,7 +5,8 @@
       "Bash(npx tailwindcss *)",
       "Bash(npm run *)",
       "Bash(not exist *)",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

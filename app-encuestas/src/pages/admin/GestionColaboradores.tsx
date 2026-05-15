@@ -66,6 +66,7 @@ function ModalColaborador({
       await createColaborador(data);
     }
     qc.invalidateQueries({ queryKey: ['colaboradores-admin'] });
+    qc.invalidateQueries({ queryKey: ['colaboradores-area'] });
     onClose();
   }
 
@@ -120,6 +121,14 @@ export function GestionColaboradores() {
   useEffect(() => {
     const urlAreaId = searchParams.get('areaId') ?? '';
     if (urlAreaId !== areaFiltro) setAreaFiltro(urlAreaId);
+    // Si llegamos con ?nuevo=1 abrimos directamente el modal de creación
+    if (searchParams.get('nuevo') === '1') {
+      setEditando(undefined);
+      setModal(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('nuevo');
+      setSearchParams(next, { replace: true });
+    }
     // solo reaccionar a cambios reales en la URL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -137,6 +146,7 @@ export function GestionColaboradores() {
   async function toggleActivo(c: Colaborador) {
     await updateColaborador(c.id, { activo: !(c.activo ?? true) });
     qc.invalidateQueries({ queryKey: ['colaboradores-admin'] });
+    qc.invalidateQueries({ queryKey: ['colaboradores-area'] });
   }
 
   function handleFiltroArea(value: string) {

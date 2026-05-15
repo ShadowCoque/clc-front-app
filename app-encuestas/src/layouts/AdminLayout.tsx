@@ -100,7 +100,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <button onClick={() => setMobileOpen(true)} className="text-[#063E7B]">
             <MenuIcon className="w-5 h-5" />
           </button>
-          <Logo size="sm" />
+          <Logo size="sm" variant="plain" />
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
