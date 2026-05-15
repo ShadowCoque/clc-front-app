@@ -102,7 +102,10 @@ export function Dashboard() {
               <KpiCard label="Comentarios" value={totalComentarios} icon={MessageSquareIcon} color="#7c3aed" />
             </div>
 
-            <ResumenCharts resumen={resumen} />
+            <ResumenCharts
+              resumen={resumen}
+              showSatisfaccionPorPregunta={Boolean(filtros.areaId || filtros.colaboradorId)}
+            />
           </>
         )}
 

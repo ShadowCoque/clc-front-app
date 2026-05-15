@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlusIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  PlusIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon,
+  AlertTriangleIcon, UsersIcon,
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getAreas, createArea, updateArea } from '../../api/areas';
-import { getPreguntas, createPregunta, updatePregunta, deletePregunta } from '../../api/preguntas';
+import { getAreasAdmin, createArea, updateArea } from '../../api/areas';
+import { getPreguntasAdmin, createPregunta, updatePregunta, deletePregunta } from '../../api/preguntas';
+import { getColaboradores } from '../../api/colaboradores';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -121,7 +126,7 @@ function ModalPregunta({ areaId, pregunta, onClose }: { areaId: number; pregunta
       } else {
         await createPregunta({ ...data, areaId });
       }
-      qc.invalidateQueries({ queryKey: ['preguntas', areaId] });
+      qc.invalidateQueries({ queryKey: ['preguntas-admin', areaId] });
       onClose();
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
@@ -182,20 +187,35 @@ function AreaRow({ area }: { area: Area }) {
   const [modalPregunta, setModalPregunta] = useState(false);
   const [preguntaEditar, setPreguntaEditar] = useState<Pregunta | undefined>();
 
-  const { data: preguntas = [], isLoading } = useQuery({
-    queryKey: ['preguntas', area.id],
-    queryFn: () => getPreguntas(area.id),
+  const { data: preguntas = [], isLoading: loadingPreguntas } = useQuery({
+    queryKey: ['preguntas-admin', area.id],
+    queryFn: () => getPreguntasAdmin(area.id),
     enabled: expanded,
   });
 
+  const { data: colaboradores = [], isLoading: loadingColabs } = useQuery({
+    queryKey: ['colaboradores-area', area.id],
+    queryFn: () => getColaboradores(area.id),
+    enabled: expanded,
+  });
+
+  const colaboradoresActivos = colaboradores.filter((c) => c.activo !== false).length;
+  const esActiva = area.activa !== false;
+  const mostrarAdvertencia = expanded && !loadingColabs && esActiva && colaboradoresActivos === 0;
+
   async function toggleArea() {
-    await updateArea(area.id, { activa: !(area.activa ?? true) });
+    await updateArea(area.id, { activa: !esActiva });
     qc.invalidateQueries({ queryKey: ['areas-admin'] });
   }
 
   async function desactivarPregunta(p: Pregunta) {
     await deletePregunta(p.id);
-    qc.invalidateQueries({ queryKey: ['preguntas', area.id] });
+    qc.invalidateQueries({ queryKey: ['preguntas-admin', area.id] });
+  }
+
+  async function activarPregunta(p: Pregunta) {
+    await updatePregunta(p.id, { activa: true });
+    qc.invalidateQueries({ queryKey: ['preguntas-admin', area.id] });
   }
 
   return (
@@ -216,7 +236,7 @@ function AreaRow({ area }: { area: Area }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-[#063E7B]">{area.nombre}</span>
-              <Badge variant={area.activa !== false ? 'success' : 'error'}>{area.activa !== false ? 'Activa' : 'Inactiva'}</Badge>
+              <Badge variant={esActiva ? 'success' : 'error'}>{esActiva ? 'Activa' : 'Inactiva'}</Badge>
               <span className="text-xs text-gray-400 font-mono">{area.slug}</span>
             </div>
             {area.descripcion && <p className="text-sm text-gray-400 mt-0.5 truncate">{area.descripcion}</p>}
@@ -226,52 +246,77 @@ function AreaRow({ area }: { area: Area }) {
             <Button size="sm" variant="ghost" onClick={() => setModalArea(true)}>
               <PencilIcon className="w-3.5 h-3.5" />
             </Button>
-            <Button size="sm" variant={area.activa !== false ? 'danger' : 'secondary'} onClick={toggleArea}>
-              {area.activa !== false ? 'Desactivar' : 'Activar'}
+            <Button size="sm" variant={esActiva ? 'danger' : 'secondary'} onClick={toggleArea}>
+              {esActiva ? 'Desactivar' : 'Activar'}
             </Button>
           </div>
         </div>
 
         {expanded && (
-          <div className="border-t border-[#C2CFDB] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-600">Preguntas</h3>
-              <Button size="sm" onClick={() => { setPreguntaEditar(undefined); setModalPregunta(true); }}>
-                <PlusIcon className="w-3.5 h-3.5" />
-                Nueva pregunta
-              </Button>
-            </div>
-            {isLoading && <Spinner size="sm" className="text-[#063E7B]" />}
-            {!isLoading && preguntas.length === 0 && (
-              <p className="text-sm text-gray-400">No hay preguntas configuradas.</p>
-            )}
-            {!isLoading && preguntas.length > 0 && (
-              <div className="space-y-2">
-                {preguntas.sort((a, b) => a.orden - b.orden).map((p) => (
-                  <div key={p.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <span className="text-xs font-bold text-gray-400 mt-0.5 w-5">#{p.orden}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800">{p.texto}</p>
-                      <div className="flex gap-2 mt-1 flex-wrap">
-                        <Badge variant="info">{TIPOS_PREGUNTA.find((t) => t.value === p.tipo)?.label ?? p.tipo}</Badge>
-                        {p.obligatoria && <Badge variant="warning">Obligatoria</Badge>}
-                        <Badge variant={p.activa !== false ? 'success' : 'error'}>{p.activa !== false ? 'Activa' : 'Inactiva'}</Badge>
-                      </div>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button size="sm" variant="ghost" onClick={() => { setPreguntaEditar(p); setModalPregunta(true); }}>
-                        <PencilIcon className="w-3.5 h-3.5" />
-                      </Button>
-                      {p.activa !== false && (
-                        <Button size="sm" variant="danger" onClick={() => desactivarPregunta(p)}>
-                          Desactivar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+          <div className="border-t border-[#C2CFDB] p-4 space-y-4">
+            {mostrarAdvertencia && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
+                <AlertTriangleIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 text-sm text-amber-900">
+                  <p className="font-medium">Esta área está activa, pero no aparecerá correctamente para los socios hasta que asignes al menos un colaborador activo.</p>
+                  <Link
+                    to={`/gestion-clc/colaboradores?areaId=${area.id}`}
+                    className="inline-flex items-center gap-1 mt-2 text-amber-700 hover:text-amber-900 font-medium underline"
+                  >
+                    <UsersIcon className="w-3.5 h-3.5" />
+                    Ir a Colaboradores
+                  </Link>
+                </div>
               </div>
             )}
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-600">Preguntas</h3>
+                <Button size="sm" onClick={() => { setPreguntaEditar(undefined); setModalPregunta(true); }}>
+                  <PlusIcon className="w-3.5 h-3.5" />
+                  Nueva pregunta
+                </Button>
+              </div>
+              {loadingPreguntas && <Spinner size="sm" className="text-[#063E7B]" />}
+              {!loadingPreguntas && preguntas.length === 0 && (
+                <p className="text-sm text-gray-400">No hay preguntas configuradas.</p>
+              )}
+              {!loadingPreguntas && preguntas.length > 0 && (
+                <div className="space-y-2">
+                  {preguntas.slice().sort((a, b) => a.orden - b.orden).map((p) => {
+                    const pActiva = p.activa !== false;
+                    return (
+                      <div key={p.id} className={`flex items-start gap-3 p-3 rounded-lg ${pActiva ? 'bg-gray-50' : 'bg-gray-100 opacity-80'}`}>
+                        <span className="text-xs font-bold text-gray-400 mt-0.5 w-5">#{p.orden}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm ${pActiva ? 'text-gray-800' : 'text-gray-500 line-through'}`}>{p.texto}</p>
+                          <div className="flex gap-2 mt-1 flex-wrap">
+                            <Badge variant="info">{TIPOS_PREGUNTA.find((t) => t.value === p.tipo)?.label ?? p.tipo}</Badge>
+                            {p.obligatoria && <Badge variant="warning">Obligatoria</Badge>}
+                            <Badge variant={pActiva ? 'success' : 'error'}>{pActiva ? 'Activa' : 'Inactiva'}</Badge>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <Button size="sm" variant="ghost" onClick={() => { setPreguntaEditar(p); setModalPregunta(true); }}>
+                            <PencilIcon className="w-3.5 h-3.5" />
+                          </Button>
+                          {pActiva ? (
+                            <Button size="sm" variant="danger" onClick={() => desactivarPregunta(p)}>
+                              Desactivar
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="secondary" onClick={() => activarPregunta(p)}>
+                              Activar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -294,7 +339,7 @@ export function GestionAreas() {
   const [modalArea, setModalArea] = useState(false);
   const { data: areas = [], isLoading } = useQuery({
     queryKey: ['areas-admin'],
-    queryFn: getAreas,
+    queryFn: getAreasAdmin,
   });
 
   return (

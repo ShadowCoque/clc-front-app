@@ -4,7 +4,8 @@
       "Bash(npm install *)",
       "Bash(npx tailwindcss *)",
       "Bash(npm run *)",
-      "Bash(not exist *)"
+      "Bash(not exist *)",
+      "Bash(npx prisma *)"
     ]
   }
 }

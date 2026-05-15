@@ -6,6 +6,11 @@ export async function getPreguntas(areaId: number): Promise<Pregunta[]> {
   return data;
 }
 
+export async function getPreguntasAdmin(areaId: number): Promise<Pregunta[]> {
+  const { data } = await api.get<Pregunta[]>('/preguntas/admin/list', { params: { areaId } });
+  return data;
+}
+
 export async function createPregunta(dto: CreatePreguntaDto): Promise<Pregunta> {
   const { data } = await api.post<Pregunta>('/preguntas', dto);
   return data;

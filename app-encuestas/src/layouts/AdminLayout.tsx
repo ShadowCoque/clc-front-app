@@ -6,21 +6,31 @@ import {
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { useAuth } from '../hooks/useAuth';
+import type { RolUsuario } from '../types';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { to: '/gestion-clc/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard' },
-  { to: '/gestion-clc/areas', icon: BuildingIcon, label: 'Áreas y Preguntas' },
-  { to: '/gestion-clc/colaboradores', icon: UsersIcon, label: 'Colaboradores' },
+interface NavItem {
+  to: string;
+  icon: typeof LayoutDashboardIcon;
+  label: string;
+  roles: RolUsuario[];
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { to: '/gestion-clc/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard', roles: ['ADMIN', 'GERENTE', 'REPORTES'] },
+  { to: '/gestion-clc/areas', icon: BuildingIcon, label: 'Áreas y Preguntas', roles: ['ADMIN'] },
+  { to: '/gestion-clc/colaboradores', icon: UsersIcon, label: 'Colaboradores', roles: ['ADMIN'] },
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navItems = NAV_ITEMS.filter((item) => !user || item.roles.includes(user.rol));
 
   function handleLogout() {
     logout();

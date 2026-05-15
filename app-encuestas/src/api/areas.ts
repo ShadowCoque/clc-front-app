@@ -6,6 +6,11 @@ export async function getAreas(): Promise<Area[]> {
   return data;
 }
 
+export async function getAreasAdmin(): Promise<Area[]> {
+  const { data } = await api.get<Area[]>('/areas/admin/list');
+  return data;
+}
+
 export async function getAreaBySlug(slug: string): Promise<Area> {
   const { data } = await api.get<Area>(`/areas/${slug}`);
   return data;

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PlusIcon, PencilIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getAreas } from '../../api/areas';
+import { getAreasAdmin } from '../../api/areas';
 import { getColaboradores, createColaborador, updateColaborador } from '../../api/colaboradores';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { Button } from '../../components/ui/Button';
@@ -13,29 +14,52 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Spinner } from '../../components/ui/Spinner';
 import { EmptyState } from '../../components/ui/EmptyState';
-import type { Colaborador } from '../../types';
+import type { Area, Colaborador } from '../../types';
 
 const schema = z.object({
   nombre: z.string().min(1, 'Requerido'),
   apellido: z.string().min(1, 'Requerido'),
-  areaId: z.number({ error: 'Selecciona un área' }).min(1),
+  areaId: z
+    .number({ error: 'Debe seleccionar un área para el colaborador.' })
+    .int()
+    .min(1, 'Debe seleccionar un área para el colaborador.'),
   activo: z.boolean().optional(),
 });
 type ColaboradorForm = z.infer<typeof schema>;
 
-function ModalColaborador({ colaborador, onClose }: { colaborador?: Colaborador; onClose: () => void }) {
+function ModalColaborador({
+  colaborador,
+  areas,
+  defaultAreaId,
+  onClose,
+}: {
+  colaborador?: Colaborador;
+  areas: Area[];
+  defaultAreaId?: number;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
   const isEdit = !!colaborador;
-  const { data: areas = [] } = useQuery({ queryKey: ['areas'], queryFn: getAreas });
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ColaboradorForm>({
     resolver: zodResolver(schema),
     defaultValues: colaborador
-      ? { nombre: colaborador.nombre, apellido: colaborador.apellido, areaId: colaborador.areaId, activo: colaborador.activo }
-      : { activo: true },
+      ? {
+          nombre: colaborador.nombre,
+          apellido: colaborador.apellido,
+          areaId: colaborador.areaId,
+          activo: colaborador.activo,
+        }
+      : {
+          nombre: '',
+          apellido: '',
+          areaId: defaultAreaId,
+          activo: true,
+        },
   });
 
   async function onSubmit(data: ColaboradorForm) {
+    if (!data.areaId || Number.isNaN(data.areaId)) return;
     if (isEdit) {
       await updateColaborador(colaborador.id, data);
     } else {
@@ -55,13 +79,15 @@ function ModalColaborador({ colaborador, onClose }: { colaborador?: Colaborador;
           <Input label="Nombre" {...register('nombre')} error={errors.nombre?.message} />
           <Input label="Apellido" {...register('apellido')} error={errors.apellido?.message} />
           <Select
-            label="Área"
+            label="Área *"
             {...register('areaId', { valueAsNumber: true })}
             placeholder="Selecciona un área"
             error={errors.areaId?.message}
           >
             {areas.map((a) => (
-              <option key={a.id} value={a.id}>{a.nombre}</option>
+              <option key={a.id} value={a.id}>
+                {a.nombre}{a.activa === false ? ' (inactiva)' : ''}
+              </option>
             ))}
           </Select>
           <label className="flex items-center gap-2 text-sm">
@@ -80,13 +106,26 @@ function ModalColaborador({ colaborador, onClose }: { colaborador?: Colaborador;
 
 export function GestionColaboradores() {
   const qc = useQueryClient();
-  const [areaFiltro, setAreaFiltro] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialAreaFiltro = searchParams.get('areaId') ?? '';
+  const [areaFiltro, setAreaFiltro] = useState(initialAreaFiltro);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState<Colaborador | undefined>();
 
-  const { data: areas = [], isSuccess: areasLoaded } = useQuery({ queryKey: ['areas'], queryFn: getAreas });
+  const { data: areas = [], isSuccess: areasLoaded } = useQuery({
+    queryKey: ['areas-admin'],
+    queryFn: getAreasAdmin,
+  });
+
+  useEffect(() => {
+    const urlAreaId = searchParams.get('areaId') ?? '';
+    if (urlAreaId !== areaFiltro) setAreaFiltro(urlAreaId);
+    // solo reaccionar a cambios reales en la URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const { data: colaboradores = [], isLoading } = useQuery({
-    queryKey: ['colaboradores-admin', areaFiltro],
+    queryKey: ['colaboradores-admin', areaFiltro, areas.length],
     enabled: areasLoaded,
     queryFn: async () => {
       if (areaFiltro) return getColaboradores(Number(areaFiltro));
@@ -100,9 +139,20 @@ export function GestionColaboradores() {
     qc.invalidateQueries({ queryKey: ['colaboradores-admin'] });
   }
 
+  function handleFiltroArea(value: string) {
+    setAreaFiltro(value);
+    if (value) {
+      setSearchParams({ areaId: value });
+    } else {
+      setSearchParams({});
+    }
+  }
+
   function getAreaNombre(areaId: number): string {
     return areas.find((a) => a.id === areaId)?.nombre ?? '—';
   }
+
+  const defaultAreaId = areaFiltro ? Number(areaFiltro) : undefined;
 
   return (
     <AdminLayout>
@@ -119,7 +169,7 @@ export function GestionColaboradores() {
           <Select
             label="Filtrar por área"
             value={areaFiltro}
-            onChange={(e) => setAreaFiltro(e.target.value)}
+            onChange={(e) => handleFiltroArea(e.target.value)}
             placeholder="Todas las áreas"
             className="max-w-xs"
           >
@@ -187,6 +237,8 @@ export function GestionColaboradores() {
       {modal && (
         <ModalColaborador
           colaborador={editando}
+          areas={areas}
+          defaultAreaId={defaultAreaId}
           onClose={() => { setModal(false); setEditando(undefined); }}
         />
       )}
