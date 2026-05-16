@@ -66,7 +66,7 @@ function ModalColaborador({
       await createColaborador(data);
     }
     qc.invalidateQueries({ queryKey: ['colaboradores-admin'] });
-    qc.invalidateQueries({ queryKey: ['colaboradores-area'] });
+    qc.invalidateQueries({ queryKey: ['areas-admin'] });
     onClose();
   }
 
@@ -113,7 +113,7 @@ export function GestionColaboradores() {
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState<Colaborador | undefined>();
 
-  const { data: areas = [], isSuccess: areasLoaded } = useQuery({
+  const { data: areas = [] } = useQuery({
     queryKey: ['areas-admin'],
     queryFn: getAreasAdmin,
   });
@@ -134,19 +134,19 @@ export function GestionColaboradores() {
   }, [searchParams]);
 
   const { data: colaboradores = [], isLoading } = useQuery({
-    queryKey: ['colaboradores-admin', areaFiltro, areas.length],
-    enabled: areasLoaded,
+    queryKey: ['colaboradores-admin', areaFiltro],
     queryFn: async () => {
-      if (areaFiltro) return getColaboradores(Number(areaFiltro));
-      const results = await Promise.all(areas.map((a) => getColaboradores(a.id)));
-      return results.flat().sort((a, b) => a.apellido.localeCompare(b.apellido));
+      const data = areaFiltro
+        ? await getColaboradores(Number(areaFiltro))
+        : await getColaboradores();
+      return [...data].sort((a, b) => a.apellido.localeCompare(b.apellido));
     },
   });
 
   async function toggleActivo(c: Colaborador) {
     await updateColaborador(c.id, { activo: !(c.activo ?? true) });
     qc.invalidateQueries({ queryKey: ['colaboradores-admin'] });
-    qc.invalidateQueries({ queryKey: ['colaboradores-area'] });
+    qc.invalidateQueries({ queryKey: ['areas-admin'] });
   }
 
   function handleFiltroArea(value: string) {

@@ -13,6 +13,11 @@ export interface Area {
   descripcion?: string | null;
   imagenUrl?: string | null;
   activa?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  // Provistos por GET /areas/admin/list; útiles para detectar áreas "incompletas"
+  totalColaboradoresActivos?: number;
+  totalPreguntasActivas?: number;
   preguntas?: Pregunta[];
   colaboradores?: Colaborador[];
 }

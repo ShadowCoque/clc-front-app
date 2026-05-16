@@ -3,14 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   PlusIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon,
-  AlertTriangleIcon, UsersIcon,
+  AlertTriangleIcon, UsersIcon, HelpCircleIcon, PowerOffIcon,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAreasAdmin, createArea, updateArea } from '../../api/areas';
 import { getPreguntasAdmin, createPregunta, updatePregunta, deletePregunta } from '../../api/preguntas';
-import { getColaboradores } from '../../api/colaboradores';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -127,6 +126,7 @@ function ModalPregunta({ areaId, pregunta, onClose }: { areaId: number; pregunta
         await createPregunta({ ...data, areaId });
       }
       qc.invalidateQueries({ queryKey: ['preguntas-admin', areaId] });
+      qc.invalidateQueries({ queryKey: ['areas-admin'] });
       onClose();
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
@@ -187,28 +187,23 @@ function AreaRow({ area }: { area: Area }) {
   const [modalPregunta, setModalPregunta] = useState(false);
   const [preguntaEditar, setPreguntaEditar] = useState<Pregunta | undefined>();
 
+  // Solo cargamos preguntas al expandir. El conteo activo viene en area.totalPreguntasActivas.
   const { data: preguntas = [], isLoading: loadingPreguntas } = useQuery({
     queryKey: ['preguntas-admin', area.id],
     queryFn: () => getPreguntasAdmin(area.id),
     enabled: expanded,
   });
 
-  // Cargamos colaboradores siempre — necesario para bloquear el botón "Activar"
-  const { data: colaboradores = [], isLoading: loadingColabs } = useQuery({
-    queryKey: ['colaboradores-area', area.id],
-    queryFn: () => getColaboradores(area.id),
-  });
-
-  const colaboradoresActivos = colaboradores.filter((c) => c.activo !== false).length;
-  const sinColaboradoresActivos = !loadingColabs && colaboradoresActivos === 0;
   const esActiva = area.activa !== false;
-  // Mientras el área esté activa pero sin colaboradores, dejamos un aviso ámbar arriba (la encuesta sigue cargando preguntas).
-  // Cuando esté inactiva por la misma razón, el aviso pasa a rojo y bloquea la activación.
-  const mostrarAdvertenciaAmbar = expanded && esActiva && sinColaboradoresActivos;
-  const bloquearActivacion = !esActiva && sinColaboradoresActivos;
+  const colabActivos = area.totalColaboradoresActivos ?? 0;
+  const pregActivas = area.totalPreguntasActivas ?? 0;
+  const sinColaboradoresActivos = colabActivos === 0;
+  const sinPreguntasActivas = pregActivas === 0;
+
+  // El card adopta un borde rojo suave cuando algo impide que la encuesta se muestre al socio.
+  const incompletaParaPublicar = esActiva && (sinColaboradoresActivos || sinPreguntasActivas);
 
   async function toggleArea() {
-    if (bloquearActivacion) return;
     await updateArea(area.id, { activa: !esActiva });
     qc.invalidateQueries({ queryKey: ['areas-admin'] });
   }
@@ -216,42 +211,31 @@ function AreaRow({ area }: { area: Area }) {
   async function desactivarPregunta(p: Pregunta) {
     await deletePregunta(p.id);
     qc.invalidateQueries({ queryKey: ['preguntas-admin', area.id] });
+    qc.invalidateQueries({ queryKey: ['areas-admin'] });
   }
 
   async function activarPregunta(p: Pregunta) {
     await updatePregunta(p.id, { activa: true });
     qc.invalidateQueries({ queryKey: ['preguntas-admin', area.id] });
+    qc.invalidateQueries({ queryKey: ['areas-admin'] });
+  }
+
+  function abrirNuevaPregunta() {
+    setPreguntaEditar(undefined);
+    setModalPregunta(true);
   }
 
   return (
     <>
       <div
-        className={`rounded-xl border shadow-sm ${
-          bloquearActivacion
-            ? 'bg-red-50/40 border-red-200'
-            : 'bg-white border-[#C2CFDB]'
+        className={`rounded-xl border shadow-sm transition-colors ${
+          !esActiva
+            ? 'bg-gray-50 border-[#C2CFDB]'
+            : incompletaParaPublicar
+              ? 'bg-white border-red-200'
+              : 'bg-white border-[#C2CFDB]'
         }`}
       >
-        {bloquearActivacion && (
-          <div className="border-b border-red-200 bg-red-50 rounded-t-xl px-4 py-3 flex items-start gap-3">
-            <AlertTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 text-sm">
-              <p className="font-medium text-red-700">
-                Esta área no puede activarse todavía porque no tiene colaboradores asignados.
-              </p>
-              <p className="text-red-600/80 mt-0.5">
-                Crea al menos un colaborador para poder mostrarla a los socios.
-              </p>
-              <Link
-                to={`/gestion-clc/colaboradores?areaId=${area.id}&nuevo=1`}
-                className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-[#063E7B] text-white rounded-lg text-xs font-medium hover:bg-[#052f5e] transition-colors"
-              >
-                <UsersIcon className="w-3.5 h-3.5" />
-                Crear colaborador
-              </Link>
-            </div>
-          </div>
-        )}
         <div className="flex items-center gap-3 p-4">
           <button onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-[#063E7B] transition-colors">
             {expanded ? <ChevronUpIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
@@ -270,8 +254,23 @@ function AreaRow({ area }: { area: Area }) {
               <Badge variant={esActiva ? 'success' : 'error'}>{esActiva ? 'Activa' : 'Inactiva'}</Badge>
               <span className="text-xs text-gray-400 font-mono">{area.slug}</span>
             </div>
+            <div className="flex items-center gap-3 mt-1 text-xs">
+              <span
+                className={`inline-flex items-center gap-1 ${sinColaboradoresActivos ? 'text-red-600 font-medium' : 'text-gray-500'}`}
+                title="Colaboradores activos"
+              >
+                <UsersIcon className="w-3 h-3" />
+                {colabActivos} colaborador{colabActivos === 1 ? '' : 'es'}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 ${sinPreguntasActivas ? 'text-red-600 font-medium' : 'text-gray-500'}`}
+                title="Preguntas activas"
+              >
+                <HelpCircleIcon className="w-3 h-3" />
+                {pregActivas} pregunta{pregActivas === 1 ? '' : 's'}
+              </span>
+            </div>
             {area.descripcion && <p className="text-sm text-gray-400 mt-0.5 truncate">{area.descripcion}</p>}
-            {area.imagenUrl && <p className="text-xs text-gray-300 mt-0.5 truncate font-mono">{area.imagenUrl}</p>}
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Button size="sm" variant="ghost" onClick={() => setModalArea(true)}>
@@ -281,8 +280,6 @@ function AreaRow({ area }: { area: Area }) {
               size="sm"
               variant={esActiva ? 'danger' : 'secondary'}
               onClick={toggleArea}
-              disabled={bloquearActivacion}
-              title={bloquearActivacion ? 'Asigna al menos un colaborador para activar esta área' : undefined}
             >
               {esActiva ? 'Desactivar' : 'Activar'}
             </Button>
@@ -290,19 +287,46 @@ function AreaRow({ area }: { area: Area }) {
         </div>
 
         {expanded && (
-          <div className="border-t border-[#C2CFDB] p-4 space-y-4">
-            {mostrarAdvertenciaAmbar && (
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
-                <AlertTriangleIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 text-sm text-amber-900">
-                  <p className="font-medium">Esta área está activa, pero no aparecerá correctamente para los socios hasta que asignes al menos un colaborador activo.</p>
+          <div className="border-t border-[#C2CFDB] p-4 space-y-3">
+            {/* Avisos compactos — solo al expandir, una línea por motivo */}
+            {!esActiva && (
+              <div className="flex items-start gap-2 text-sm bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
+                <PowerOffIcon className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                <p className="text-gray-700">Esta área está desactivada y no se muestra a los socios.</p>
+              </div>
+            )}
+            {esActiva && sinColaboradoresActivos && (
+              <div className="flex items-start gap-2 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <AlertTriangleIcon className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 flex flex-wrap items-center gap-2">
+                  <p className="text-red-700">
+                    Esta área necesita al menos un colaborador activo para mostrarse a los socios.
+                  </p>
                   <Link
                     to={`/gestion-clc/colaboradores?areaId=${area.id}&nuevo=1`}
-                    className="inline-flex items-center gap-1 mt-2 text-amber-700 hover:text-amber-900 font-medium underline"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#063E7B] text-white rounded-md text-xs font-medium hover:bg-[#052f5e] transition-colors"
                   >
-                    <UsersIcon className="w-3.5 h-3.5" />
+                    <UsersIcon className="w-3 h-3" />
                     Crear colaborador
                   </Link>
+                </div>
+              </div>
+            )}
+            {esActiva && sinPreguntasActivas && (
+              <div className="flex items-start gap-2 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <AlertTriangleIcon className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 flex flex-wrap items-center gap-2">
+                  <p className="text-red-700">
+                    Esta área necesita al menos una pregunta activa para mostrarse a los socios.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={abrirNuevaPregunta}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#063E7B] text-white rounded-md text-xs font-medium hover:bg-[#052f5e] transition-colors"
+                  >
+                    <PlusIcon className="w-3 h-3" />
+                    Crear pregunta
+                  </button>
                 </div>
               </div>
             )}
@@ -310,7 +334,7 @@ function AreaRow({ area }: { area: Area }) {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-600">Preguntas</h3>
-                <Button size="sm" onClick={() => { setPreguntaEditar(undefined); setModalPregunta(true); }}>
+                <Button size="sm" onClick={abrirNuevaPregunta}>
                   <PlusIcon className="w-3.5 h-3.5" />
                   Nueva pregunta
                 </Button>

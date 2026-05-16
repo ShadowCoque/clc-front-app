@@ -50,28 +50,40 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
 
   const npsVal = resumen.nps;
 
-  // Label dentro de cada porción con el número en blanco para máximo contraste
+  // Label externo: número junto a cada porción, conectado por una línea, con el color del segmento.
   function renderNpsLabel(props: {
     cx?: number; cy?: number; midAngle?: number;
-    innerRadius?: number; outerRadius?: number; value?: number;
+    outerRadius?: number; value?: number;
+    payload?: { color?: string };
   }) {
-    const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value = 0 } = props;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+    const { cx = 0, cy = 0, midAngle = 0, outerRadius = 0, value = 0, payload } = props;
     const RADIAN = Math.PI / 180;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const sin = Math.sin(-midAngle * RADIAN);
+    const cos = Math.cos(-midAngle * RADIAN);
+    const sx = cx + outerRadius * cos;
+    const sy = cy + outerRadius * sin;
+    const mx = cx + (outerRadius + 14) * cos;
+    const my = cy + (outerRadius + 14) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 14;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+    const color = payload?.color ?? '#374151';
     return (
-      <text
-        x={x}
-        y={y}
-        fill="#ffffff"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={14}
-        fontWeight={700}
-      >
-        {value}
-      </text>
+      <g>
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={color} strokeWidth={1.5} fill="none" />
+        <circle cx={ex} cy={ey} r={2.5} fill={color} stroke="none" />
+        <text
+          x={ex + (cos >= 0 ? 6 : -6)}
+          y={ey}
+          fill={color}
+          textAnchor={textAnchor}
+          dominantBaseline="central"
+          fontSize={13}
+          fontWeight={700}
+        >
+          {value}
+        </text>
+      </g>
     );
   }
 
@@ -134,32 +146,53 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
         )}
 
         {npsPieData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie
-                data={npsPieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={100}
-                dataKey="value"
-                paddingAngle={2}
-                labelLine={false}
-                label={renderNpsLabel}
-                isAnimationActive={false}
-              >
-                {npsPieData.map((d, i) => (
-                  <Cell key={i} fill={d.color} stroke="#ffffff" strokeWidth={2} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(v, _name, ctx) => {
-                  const sub = (ctx?.payload as { sub?: string })?.sub;
-                  return [`${v} encuestas${sub ? ` · ${sub}` : ''}`, ctx?.payload?.name ?? ''];
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart margin={{ top: 12, right: 60, bottom: 12, left: 60 }}>
+                <Pie
+                  data={npsPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={90}
+                  dataKey="value"
+                  paddingAngle={2}
+                  labelLine={false}
+                  label={renderNpsLabel}
+                  isAnimationActive={false}
+                >
+                  {npsPieData.map((d, i) => (
+                    <Cell key={i} fill={d.color} stroke="#ffffff" strokeWidth={2} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v, _name, ctx) => {
+                    const sub = (ctx?.payload as { sub?: string })?.sub;
+                    return [`${v} encuestas${sub ? ` · ${sub}` : ''}`, ctx?.payload?.name ?? ''];
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {npsSegments.map((s) => (
+                <div
+                  key={s.key}
+                  className="rounded-lg border border-[#C2CFDB] bg-gray-50 px-3 py-2 text-center"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    <span className="text-xs font-medium text-gray-600">{s.label}</span>
+                  </div>
+                  <p className="text-lg font-bold text-gray-800 leading-tight">{s.value}</p>
+                  <p className="text-[10px] text-gray-400">{s.sub}</p>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="h-[220px] flex flex-col items-center justify-center text-gray-400 text-sm gap-1">
             {npsVal != null ? (

@@ -57,10 +57,11 @@ export function Encuesta() {
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: area, isLoading, isError } = useQuery({
+  const { data: area, isLoading, isError, error } = useQuery({
     queryKey: ['area-slug', slug],
     queryFn: () => getAreaBySlug(slug),
     enabled: !!slug,
+    retry: false,
   });
 
   // Backend ya devuelve solo activas/activos — no re-filtrar
@@ -97,6 +98,23 @@ export function Encuesta() {
   }
 
   if (isError || !area) {
+    // El backend devuelve 400 cuando un área existe pero todavía no tiene
+    // colaboradores activos o preguntas activas; lo tratamos como "aún no disponible".
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    if (status === 400) {
+      return (
+        <PublicLayout>
+          <div className="flex-1 flex items-center justify-center px-4">
+            <div className="bg-white rounded-xl p-6 max-w-md">
+              <ErrorState
+                title="Área no disponible"
+                description="Esta área aún no está disponible para encuestas."
+              />
+            </div>
+          </div>
+        </PublicLayout>
+      );
+    }
     return (
       <PublicLayout>
         <div className="flex-1 flex items-center justify-center px-4">
