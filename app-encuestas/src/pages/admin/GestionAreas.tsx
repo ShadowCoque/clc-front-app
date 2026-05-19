@@ -202,6 +202,7 @@ function AreaRow({ area }: { area: Area }) {
 
   // El card adopta un borde rojo suave cuando algo impide que la encuesta se muestre al socio.
   const incompletaParaPublicar = esActiva && (sinColaboradoresActivos || sinPreguntasActivas);
+  const noVisibleParaSocios = !esActiva || sinColaboradoresActivos || sinPreguntasActivas;
 
   async function toggleArea() {
     await updateArea(area.id, { activa: !esActiva });
@@ -252,6 +253,7 @@ function AreaRow({ area }: { area: Area }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-[#063E7B]">{area.nombre}</span>
               <Badge variant={esActiva ? 'success' : 'error'}>{esActiva ? 'Activa' : 'Inactiva'}</Badge>
+              {noVisibleParaSocios && <Badge variant="warning">No visible para socios</Badge>}
               <span className="text-xs text-gray-400 font-mono">{area.slug}</span>
             </div>
             <div className="flex items-center gap-3 mt-1 text-xs">

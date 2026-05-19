@@ -102,19 +102,20 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
     No: p.totalNo,
   }));
 
-  // ── Colaboradores ─────────────────────────────────────────────────────────
+  // ── Colaboradores (Sí/No) ─────────────────────────────────────────────────
   const colaboradoresData = (resumen.colaboradores ?? [])
-    .filter((c) => c.promedioEscala != null)
+    .filter((c) => ((c.totalSi ?? 0) + (c.totalNo ?? 0)) > 0)
     .map((c) => {
       const nombreCompleto = `${c.nombre} ${c.apellido}`.trim();
       const short = nombreCompleto.length > 20 ? nombreCompleto.slice(0, 20) : nombreCompleto;
       const areaAbbr = getAreaShortName(c.areaNombre);
-      const promedio = Number((c.promedioEscala ?? 0).toFixed(2));
       return {
         name: short,
         area: areaAbbr,
-        Promedio: promedio,
-        fill: distColor(promedio),
+        areaNombre: c.areaNombre,
+        Sí: c.totalSi ?? 0,
+        No: c.totalNo ?? 0,
+        porcentajeSatisfaccion: c.porcentajeSatisfaccion,
       };
     });
 
@@ -129,7 +130,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
           )}
         </div>
 
-        {/* Leyenda compacta con el color de cada segmento */}
+        {/* Leyenda compacta con el color, conteo y rango de cada segmento */}
         {npsPieData.length > 0 && (
           <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-1">
             {npsSegments.map((s) => (
@@ -138,7 +139,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                   className="w-2.5 h-2.5 rounded-full inline-block"
                   style={{ backgroundColor: s.color }}
                 />
-                <span className="font-medium text-gray-600">{s.label}</span>
+                <span className="font-medium text-gray-600">{s.label}: {s.value}</span>
                 <span className="text-gray-400">({s.sub})</span>
               </span>
             ))}
@@ -146,53 +147,32 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
         )}
 
         {npsPieData.length > 0 ? (
-          <>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart margin={{ top: 12, right: 60, bottom: 12, left: 60 }}>
-                <Pie
-                  data={npsPieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={90}
-                  dataKey="value"
-                  paddingAngle={2}
-                  labelLine={false}
-                  label={renderNpsLabel}
-                  isAnimationActive={false}
-                >
-                  {npsPieData.map((d, i) => (
-                    <Cell key={i} fill={d.color} stroke="#ffffff" strokeWidth={2} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(v, _name, ctx) => {
-                    const sub = (ctx?.payload as { sub?: string })?.sub;
-                    return [`${v} encuestas${sub ? ` · ${sub}` : ''}`, ctx?.payload?.name ?? ''];
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              {npsSegments.map((s) => (
-                <div
-                  key={s.key}
-                  className="rounded-lg border border-[#C2CFDB] bg-gray-50 px-3 py-2 text-center"
-                >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full inline-block"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    <span className="text-xs font-medium text-gray-600">{s.label}</span>
-                  </div>
-                  <p className="text-lg font-bold text-gray-800 leading-tight">{s.value}</p>
-                  <p className="text-[10px] text-gray-400">{s.sub}</p>
-                </div>
-              ))}
-            </div>
-          </>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart margin={{ top: 12, right: 60, bottom: 12, left: 60 }}>
+              <Pie
+                data={npsPieData}
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={90}
+                dataKey="value"
+                paddingAngle={2}
+                labelLine={false}
+                label={renderNpsLabel}
+                isAnimationActive={false}
+              >
+                {npsPieData.map((d, i) => (
+                  <Cell key={i} fill={d.color} stroke="#ffffff" strokeWidth={2} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(v, _name, ctx) => {
+                  const sub = (ctx?.payload as { sub?: string })?.sub;
+                  return [`${v} encuestas${sub ? ` · ${sub}` : ''}`, ctx?.payload?.name ?? ''];
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         ) : (
           <div className="h-[220px] flex flex-col items-center justify-center text-gray-400 text-sm gap-1">
             {npsVal != null ? (
@@ -264,10 +244,10 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
         </div>
       )}
 
-      {/* ── Promedio por colaborador ── */}
+      {/* ── Satisfacción por colaborador (Sí/No) ── */}
       {colaboradoresData.length > 0 && (
         <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm p-5 lg:col-span-2">
-          <h3 className="font-semibold text-gray-700 mb-4">Promedio escala por colaborador</h3>
+          <h3 className="font-semibold text-gray-700 mb-4">Satisfacción por colaborador (Sí/No)</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={colaboradoresData} margin={{ bottom: 40 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -293,32 +273,36 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                   );
                 }}
               />
-              <YAxis domain={[0, 10]} />
+              <YAxis allowDecimals={false} />
               <Tooltip
-                formatter={(v, _name, ctx) => {
-                  const area = (ctx?.payload as { area?: string })?.area;
-                  return area ? [`${v} (${area})`, 'Promedio'] : [`${v}`, 'Promedio'];
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const item = (payload[0] as any)?.payload;
+                  return (
+                    <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm shadow-lg">
+                      <p className="font-semibold text-gray-700">{label}</p>
+                      {item?.areaNombre && <p className="text-xs text-[#063E7B] mb-1">{item.areaNombre}</p>}
+                      <p className="text-green-600">Sí: {item?.Sí}</p>
+                      <p className="text-red-600">No: {item?.No}</p>
+                      {item?.porcentajeSatisfaccion != null && (
+                        <p className="text-xs text-gray-500 mt-1">Satisfacción: {Number(item.porcentajeSatisfaccion).toFixed(1)}%</p>
+                      )}
+                    </div>
+                  );
                 }}
               />
-              <Bar dataKey="Promedio" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-                {colaboradoresData.map((d, i) => (
-                  <Cell key={i} fill={d.fill} />
-                ))}
-              </Bar>
+              <Bar dataKey="Sí" fill={COLOR_GREEN} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="No" fill={COLOR_RED} radius={[4, 4, 0, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
           <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 mt-2">
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_RED }} />
-              1–6
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_YELLOW }} />
-              7–8
-            </span>
-            <span className="inline-flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_GREEN }} />
-              9–10
+              Sí
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_RED }} />
+              No
             </span>
           </div>
         </div>

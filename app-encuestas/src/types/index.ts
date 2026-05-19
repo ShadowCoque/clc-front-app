@@ -113,6 +113,9 @@ export interface ColaboradorResumen {
   promotores: number;
   pasivos: number;
   detractores: number;
+  totalSi?: number;
+  totalNo?: number;
+  totalRespuestasSiNo?: number;
 }
 
 export interface AreaResumen {
