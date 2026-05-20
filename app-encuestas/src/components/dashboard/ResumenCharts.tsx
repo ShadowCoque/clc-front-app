@@ -24,6 +24,23 @@ function distColor(score: number): string {
   return COLOR_GREEN;
 }
 
+// Divide texto en líneas que no excedan maxChars sin romper palabras.
+function wrapText(text: string, maxChars: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+  for (const w of words) {
+    if (current.length + w.length + 1 > maxChars && current) {
+      lines.push(current);
+      current = w;
+    } else {
+      current = current ? `${current} ${w}` : w;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 interface Props {
   resumen: ReporteResumen;
   showSatisfaccionPorPregunta: boolean;
@@ -33,11 +50,13 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
   const esc = resumen.resumenEscala;
 
   // ── Dona NPS ──────────────────────────────────────────────────────────────
+  const totalNps = esc ? esc.promotores + esc.pasivos + esc.detractores : 0;
+  const pctNps = (v: number) => (totalNps > 0 ? (v / totalNps) * 100 : 0);
   const npsSegments = esc
     ? [
-        { key: 'promotores', label: 'Promotores', sub: '9-10', value: esc.promotores, color: COLORS_NPS.promotores },
-        { key: 'pasivos', label: 'Pasivos', sub: '7-8', value: esc.pasivos, color: COLORS_NPS.pasivos },
-        { key: 'detractores', label: 'Detractores', sub: '1-6', value: esc.detractores, color: COLORS_NPS.detractores },
+        { key: 'promotores', label: 'Promotores', sub: '9-10', value: esc.promotores, color: COLORS_NPS.promotores, pct: pctNps(esc.promotores) },
+        { key: 'pasivos', label: 'Pasivos', sub: '7-8', value: esc.pasivos, color: COLORS_NPS.pasivos, pct: pctNps(esc.pasivos) },
+        { key: 'detractores', label: 'Detractores', sub: '1-6', value: esc.detractores, color: COLORS_NPS.detractores, pct: pctNps(esc.detractores) },
       ]
     : [];
 
@@ -97,7 +116,8 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
 
   // ── SI/NO ─────────────────────────────────────────────────────────────────
   const siNoData = (resumen.preguntasSiNo ?? []).map((p) => ({
-    name: p.texto.length > 30 ? p.texto.slice(0, 30) + '…' : p.texto,
+    name: p.texto,
+    fullText: p.texto,
     Sí: p.totalSi,
     No: p.totalNo,
   }));
@@ -130,18 +150,23 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
           )}
         </div>
 
-        {/* Leyenda compacta con el color, conteo y rango de cada segmento */}
+        {/* Leyenda compacta con el color, conteo, rango y porcentaje por segmento */}
         {npsPieData.length > 0 && (
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-1">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-500 mb-2">
             {npsSegments.map((s) => (
-              <span key={s.key} className="inline-flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full inline-block"
-                  style={{ backgroundColor: s.color }}
-                />
-                <span className="font-medium text-gray-600">{s.label}: {s.value}</span>
-                <span className="text-gray-400">({s.sub})</span>
-              </span>
+              <div key={s.key} className="flex flex-col items-start">
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full inline-block"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  <span className="font-medium text-gray-600">{s.label}: {s.value}</span>
+                  <span className="text-gray-400">({s.sub})</span>
+                </span>
+                <span className="ml-4 mt-0.5 font-semibold text-sm" style={{ color: s.color }}>
+                  {s.pct.toFixed(1)}%
+                </span>
+              </div>
             ))}
           </div>
         )}
@@ -207,15 +232,15 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
           <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 mt-2">
             <span className="inline-flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_RED }} />
-              1–6 Detractores
+              Detractores
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_YELLOW }} />
-              7–8 Pasivos
+              Pasivos
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLOR_GREEN }} />
-              9–10 Promotores
+              Promotores
             </span>
           </div>
         </div>
@@ -226,12 +251,51 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
         siNoData.length > 0 && (
           <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm p-5 lg:col-span-2">
             <h3 className="font-semibold text-gray-700 mb-4">Satisfacción por pregunta (Sí/No)</h3>
-            <ResponsiveContainer width="100%" height={Math.max(220, siNoData.length * 48)}>
+            <ResponsiveContainer width="100%" height={Math.max(240, siNoData.length * 64)}>
               <BarChart data={siNoData} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" allowDecimals={false} />
-                <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={260}
+                  interval={0}
+                  tick={(props: any) => {
+                    const { x, y, payload } = props;
+                    const idx = typeof payload?.index === 'number' ? payload.index : 0;
+                    const full = siNoData[idx]?.fullText ?? String(payload?.value ?? '');
+                    const lines = wrapText(full, 32);
+                    const shown = lines.slice(0, 2);
+                    if (lines.length > 2 && shown[1]) {
+                      shown[1] = shown[1].slice(0, Math.max(0, shown[1].length - 1)) + '…';
+                    }
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text textAnchor="end" fill="#374151" fontSize={11}>
+                          <title>{full}</title>
+                          {shown.map((line, i) => (
+                            <tspan key={i} x={-4} dy={i === 0 ? 4 : 13}>
+                              {line}
+                            </tspan>
+                          ))}
+                        </text>
+                      </g>
+                    );
+                  }}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const item = (payload[0] as any)?.payload;
+                    return (
+                      <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm shadow-lg max-w-xs">
+                        <p className="font-semibold text-gray-700 mb-1">{item?.fullText}</p>
+                        <p className="text-green-600">Sí: {item?.Sí}</p>
+                        <p className="text-red-600">No: {item?.No}</p>
+                      </div>
+                    );
+                  }}
+                />
                 <Bar dataKey="Sí" fill={COLOR_GREEN} radius={[0, 4, 4, 0]} />
                 <Bar dataKey="No" fill={COLOR_RED} radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -249,7 +313,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
         <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm p-5 lg:col-span-2">
           <h3 className="font-semibold text-gray-700 mb-4">Satisfacción por colaborador (Sí/No)</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={colaboradoresData} margin={{ bottom: 40 }}>
+            <BarChart data={colaboradoresData} margin={{ bottom: 40 }} maxBarSize={48}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="name"
