@@ -68,13 +68,25 @@ export function Encuesta() {
   const preguntas = [...(area?.preguntas ?? [])].sort((a, b) => a.orden - b.orden);
   const colaboradores = area?.colaboradores ?? [];
 
+  // El param ?colaborador=X solo se respeta si ese id pertenece al área cargada.
+  const colaboradorParamValido =
+    !!colaboradorParam &&
+    colaboradores.some((c) => c.id === Number(colaboradorParam));
+
   const schema = buildSchema(preguntas);
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
   });
 
   useEffect(() => {
-    if (colaboradores.length === 1) setColaboradorId(String(colaboradores[0].id));
+    if (!area) return;
+    if (colaboradorParamValido) {
+      setColaboradorId(String(colaboradorParam));
+    } else if (colaboradores.length === 1) {
+      setColaboradorId(String(colaboradores[0].id));
+    } else {
+      setColaboradorId('');
+    }
   }, [area]);
 
   if (!slug) {
@@ -142,6 +154,10 @@ export function Encuesta() {
   }
 
   async function onSubmit(data: FormValues) {
+    if (colaboradores.length > 0 && !colaboradorId) {
+      setSubmitError('Por favor selecciona quién le atendió antes de enviar.');
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -207,7 +223,7 @@ export function Encuesta() {
                 value={colaboradorId}
                 onChange={(e) => setColaboradorId(e.target.value)}
                 placeholder="Selecciona un colaborador"
-                disabled={!!colaboradorParam}
+                disabled={colaboradorParamValido}
               >
                 {colaboradores.map((c) => (
                   <option key={c.id} value={c.id}>

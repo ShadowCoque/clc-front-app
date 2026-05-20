@@ -6,7 +6,8 @@
       "Bash(npm run *)",
       "Bash(not exist *)",
       "Bash(npx prisma *)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx tsc *)"
     ]
   }
 }
