@@ -67,7 +67,8 @@ export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: E
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-[#C2CFDB]">
+      {/* ── Vista tabla (tablet/desktop) ─────────────────────────────────────── */}
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-[#C2CFDB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#063E7B] text-white">
@@ -115,6 +116,46 @@ export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: E
         </table>
       </div>
 
+      {/* ── Vista tarjetas (móvil) ───────────────────────────────────────────── */}
+      <ul className="md:hidden space-y-2.5">
+        {encuestas.map((e) => {
+          const escalaVal = getEscalaVal(e);
+          return (
+            <li key={e.id}>
+              <button
+                type="button"
+                onClick={() => setDetalle(e)}
+                className="w-full text-left bg-white rounded-xl border border-[#C2CFDB] p-3 active:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] text-gray-400">
+                      {e.fecha ?? e.fechaDia ?? '—'} · {e.hora ?? '—'}
+                    </div>
+                    <div className="font-medium text-gray-800 truncate mt-0.5">
+                      {e.nombreSocio ?? '—'}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5 truncate">
+                      {getAreaNombre(e)} · {getColaboradorNombre(e)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {escalaVal != null ? (
+                      <span className={`inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold ${escalaBadgeClass(escalaVal)}`}>
+                        {Number.isInteger(escalaVal) ? escalaVal : escalaVal.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 text-xs w-9 text-center">—</span>
+                    )}
+                    <EyeIcon className="w-4 h-4 text-[#063E7B]" />
+                  </div>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
       {meta && (
         <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
           <p className="text-sm text-gray-500">{paginationText(meta)}</p>
@@ -152,7 +193,7 @@ export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: E
             </div>
 
             {/* Meta info */}
-            <div className="grid grid-cols-2 gap-3 px-6 py-4 bg-[#f8fafc] border-b border-[#C2CFDB] flex-shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-5 sm:px-6 py-4 bg-[#f8fafc] border-b border-[#C2CFDB] flex-shrink-0">
               <div className="flex items-center gap-2 text-sm">
                 <UserIcon className="w-4 h-4 text-[#063E7B] flex-shrink-0" />
                 <div>
@@ -168,7 +209,7 @@ export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: E
                   <p className="text-xs text-gray-500 truncate">{getColaboradorNombre(detalle)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm col-span-2">
+              <div className="flex items-center gap-2 text-sm sm:col-span-2">
                 <CalendarIcon className="w-4 h-4 text-[#063E7B] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-gray-400">Fecha y hora</p>

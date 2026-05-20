@@ -200,47 +200,90 @@ export function GestionColaboradores() {
         )}
 
         {!isLoading && colaboradores.length > 0 && (
-          <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#063E7B] text-white">
-                  <th className="px-4 py-3 text-left font-medium">Nombre</th>
-                  <th className="px-4 py-3 text-left font-medium">Apellido</th>
-                  <th className="px-4 py-3 text-left font-medium">Área</th>
-                  <th className="px-4 py-3 text-center font-medium">Estado</th>
-                  <th className="px-4 py-3 text-center font-medium">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {colaboradores.map((c, i) => (
-                  <tr key={c.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 text-gray-800">{c.nombre}</td>
-                    <td className="px-4 py-3 text-gray-800">{c.apellido}</td>
-                    <td className="px-4 py-3 text-gray-500">{getAreaNombre(c.areaId)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge variant={c.activo !== false ? 'success' : 'error'}>
-                        {c.activo !== false ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2 justify-center">
-                        <Button size="sm" variant="ghost" onClick={() => { setEditando(c); setModal(true); }}>
-                          <PencilIcon className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={c.activo !== false ? 'danger' : 'secondary'}
-                          onClick={() => toggleActivo(c)}
-                        >
-                          {c.activo !== false ? 'Desactivar' : 'Activar'}
-                        </Button>
-                      </div>
-                    </td>
+          <>
+            {/* ── Vista tabla (tablet/desktop) ─────────────────────────────── */}
+            <div className="hidden md:block bg-white rounded-xl border border-[#C2CFDB] shadow-sm overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[#063E7B] text-white">
+                    <th className="px-4 py-3 text-left font-medium">Nombre</th>
+                    <th className="px-4 py-3 text-left font-medium">Apellido</th>
+                    <th className="px-4 py-3 text-left font-medium">Área</th>
+                    <th className="px-4 py-3 text-center font-medium">Estado</th>
+                    <th className="px-4 py-3 text-center font-medium">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {colaboradores.map((c, i) => (
+                    <tr key={c.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 text-gray-800">{c.nombre}</td>
+                      <td className="px-4 py-3 text-gray-800">{c.apellido}</td>
+                      <td className="px-4 py-3 text-gray-500">{getAreaNombre(c.areaId)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={c.activo !== false ? 'success' : 'error'}>
+                          {c.activo !== false ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 justify-center">
+                          <Button size="sm" variant="ghost" onClick={() => { setEditando(c); setModal(true); }}>
+                            <PencilIcon className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={c.activo !== false ? 'danger' : 'secondary'}
+                            onClick={() => toggleActivo(c)}
+                          >
+                            {c.activo !== false ? 'Desactivar' : 'Activar'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Vista tarjetas (móvil) ───────────────────────────────────── */}
+            <ul className="md:hidden space-y-2.5">
+              {colaboradores.map((c) => (
+                <li key={c.id} className="bg-white rounded-xl border border-[#C2CFDB] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-gray-800 truncate">
+                        {c.nombre} {c.apellido}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5 truncate">
+                        {getAreaNombre(c.areaId)}
+                      </div>
+                    </div>
+                    <Badge variant={c.activo !== false ? 'success' : 'error'}>
+                      {c.activo !== false ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="flex-1"
+                      onClick={() => { setEditando(c); setModal(true); }}
+                    >
+                      <PencilIcon className="w-3.5 h-3.5" />
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={c.activo !== false ? 'danger' : 'secondary'}
+                      className="flex-1"
+                      onClick={() => toggleActivo(c)}
+                    >
+                      {c.activo !== false ? 'Desactivar' : 'Activar'}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
 

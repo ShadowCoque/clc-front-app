@@ -247,9 +247,10 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
       )}
 
       {/* ── SI/NO (solo si hay filtro por área o colaborador) ── */}
+      {/* Oculto en móvil: el gráfico horizontal con preguntas largas se ve mal en pantallas estrechas */}
       {showSatisfaccionPorPregunta ? (
         siNoData.length > 0 && (
-          <div className="bg-white rounded-xl border border-[#C2CFDB] shadow-sm p-5 lg:col-span-2">
+          <div className="hidden md:block bg-white rounded-xl border border-[#C2CFDB] shadow-sm p-5 lg:col-span-2">
             <h3 className="font-semibold text-gray-700 mb-4">Satisfacción por pregunta (Sí/No)</h3>
             <ResponsiveContainer width="100%" height={Math.max(240, siNoData.length * 64)}>
               <BarChart data={siNoData} layout="vertical" margin={{ left: 20 }}>
@@ -303,7 +304,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
           </div>
         )
       ) : (
-        <div className="bg-white rounded-xl border border-dashed border-[#C2CFDB] p-5 lg:col-span-2 text-center text-sm text-gray-500">
+        <div className="hidden md:block bg-white rounded-xl border border-dashed border-[#C2CFDB] p-5 lg:col-span-2 text-center text-sm text-gray-500">
           Selecciona un área o colaborador para ver la satisfacción por pregunta.
         </div>
       )}

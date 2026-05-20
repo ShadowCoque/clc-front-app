@@ -24,7 +24,8 @@ export function ComentariosTable({ comentarios }: ComentariosTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-xl border border-[#C2CFDB]">
+      {/* ── Vista tabla (tablet/desktop) ─────────────────────────────────────── */}
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-[#C2CFDB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#063E7B] text-white">
@@ -48,6 +49,20 @@ export function ComentariosTable({ comentarios }: ComentariosTableProps) {
           </tbody>
         </table>
       </div>
+
+      {/* ── Vista tarjetas (móvil) ───────────────────────────────────────────── */}
+      <ul className="md:hidden space-y-2.5">
+        {filasPagina.map((c, i) => (
+          <li key={i} className="bg-white rounded-xl border border-[#C2CFDB] p-3">
+            <div className="text-[11px] text-gray-400">{c.fecha} · {c.area}</div>
+            <div className="font-medium text-gray-800 mt-0.5 truncate">{c.nombreSocio}</div>
+            {c.colaborador && (
+              <div className="text-xs text-gray-500 mt-0.5 truncate">{c.colaborador}</div>
+            )}
+            <p className="text-sm text-gray-700 mt-2 leading-relaxed break-words">{c.texto}</p>
+          </li>
+        ))}
+      </ul>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-500">

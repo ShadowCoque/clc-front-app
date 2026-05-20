@@ -40,7 +40,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const Sidebar = () => (
     <nav className="flex flex-col h-full">
       <div className="p-5 border-b border-white/10">
-        <Logo size="sm" />
+        <NavLink to="/gestion-clc/dashboard">
+          <Logo size="sm" />
+        </NavLink>
       </div>
       <div className="flex-1 py-4 px-3 space-y-1">
         {navItems.map(({ to, icon: Icon, label }) => (
@@ -100,7 +102,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <button onClick={() => setMobileOpen(true)} className="text-[#063E7B]">
             <MenuIcon className="w-5 h-5" />
           </button>
-          <Logo size="sm" variant="plain" />
+          <NavLink to="/gestion-clc/dashboard">
+            <Logo size="sm" variant="plain" />
+          </NavLink>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6">

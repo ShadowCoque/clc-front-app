@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 
 interface PublicLayoutProps {
@@ -10,7 +11,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
     <div className="min-h-screen bg-gradient-to-br from-[#063E7B] via-[#0a5298] to-[#063E7B] flex flex-col">
       <header className="bg-white/10 backdrop-blur-sm border-b border-white/20 px-4 py-3">
         <div className="max-w-2xl mx-auto flex justify-center">
-          <Logo size="sm" />
+          <Link to="/">
+            <Logo size="sm" />
+          </Link>
         </div>
       </header>
       <main className="flex-1 flex flex-col">{children}</main>
