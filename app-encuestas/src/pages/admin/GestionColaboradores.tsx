@@ -144,7 +144,7 @@ export function GestionColaboradores() {
   });
 
   async function toggleActivo(c: Colaborador) {
-    await updateColaborador(c.id, { activo: !(c.activo ?? true) });
+    await updateColaborador(c.id, { activo: !(c.activo ?? true), areaId: c.areaId });
     qc.invalidateQueries({ queryKey: ['colaboradores-admin'] });
     qc.invalidateQueries({ queryKey: ['areas-admin'] });
   }
