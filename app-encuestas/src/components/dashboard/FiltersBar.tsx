@@ -6,7 +6,7 @@ import { getColaboradores } from '../../api/colaboradores';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import type { ReporteFiltros } from '../../types';
+import type { Colaborador, ReporteFiltros } from '../../types';
 
 interface FiltersBarProps {
   onFilter: (filtros: ReporteFiltros) => void;
@@ -30,6 +30,23 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
   });
 
   useEffect(() => { setColaboradorId(''); }, [areaId]);
+
+  // Solo colaboradores activos (igual que áreas, que el endpoint público ya filtra)
+  const colaboradoresActivos = colaboradores.filter(c => c.activo !== false);
+
+  // En contexto multi-área: si dos colaboradores comparten nombre+apellido, añadir el área entre paréntesis
+  function getNombreColaborador(c: Colaborador): string {
+    const nombreCompleto = `${c.nombre} ${c.apellido}`;
+    if (areaId) return nombreCompleto; // contexto de área única: nombre sin ambiguación
+    const esDuplicado = colaboradoresActivos.some(
+      x => x.id !== c.id && `${x.nombre} ${x.apellido}` === nombreCompleto
+    );
+    if (esDuplicado) {
+      const area = areas.find(a => a.id === c.areaId);
+      return area ? `${nombreCompleto} (${area.nombre})` : nombreCompleto;
+    }
+    return nombreCompleto;
+  }
 
   function buildFiltros(): ReporteFiltros {
     return {
@@ -66,8 +83,8 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
           ))}
         </Select>
         <Select value={colaboradorId} onChange={(e) => setColaboradorId(e.target.value)} placeholder="Todos" label="Colaborador">
-          {colaboradores.map((c) => (
-            <option key={c.id} value={c.id}>{c.nombre} {c.apellido}</option>
+          {colaboradoresActivos.map((c) => (
+            <option key={c.id} value={c.id}>{getNombreColaborador(c)}</option>
           ))}
         </Select>
         <Input
