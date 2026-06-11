@@ -25,19 +25,15 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/gestion-clc/colaboradores', icon: UsersIcon, label: 'Colaboradores', roles: ['ADMIN'] },
 ];
 
-export function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  const navItems = NAV_ITEMS.filter((item) => !user || item.roles.includes(user.rol));
-
-  function handleLogout() {
-    logout();
-    navigate('/gestion-clc/login');
-  }
-
-  const Sidebar = () => (
+// Declarado a nivel de módulo: crearlo dentro del render haría que React lo
+// desmonte y remonte en cada render del layout.
+function Sidebar({ navItems, userEmail, onNavigate, onLogout }: {
+  navItems: NavItem[];
+  userEmail?: string;
+  onNavigate: () => void;
+  onLogout: () => void;
+}) {
+  return (
     <nav className="flex flex-col h-full">
       <div className="p-5 border-b border-white/10">
         <NavLink to="/gestion-clc/dashboard">
@@ -49,7 +45,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <NavLink
             key={to}
             to={to}
-            onClick={() => setMobileOpen(false)}
+            onClick={onNavigate}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -64,11 +60,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         ))}
       </div>
       <div className="p-4 border-t border-white/10">
-        {user && (
-          <p className="text-white/50 text-xs mb-3 truncate">{user.email}</p>
+        {userEmail && (
+          <p className="text-white/50 text-xs mb-3 truncate">{userEmail}</p>
         )}
         <button
-          onClick={handleLogout}
+          onClick={onLogout}
           className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors w-full"
         >
           <LogOutIcon className="w-4 h-4" />
@@ -77,12 +73,30 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </div>
     </nav>
   );
+}
+
+export function AdminLayout({ children }: AdminLayoutProps) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navItems = NAV_ITEMS.filter((item) => !user || item.roles.includes(user.rol));
+
+  function handleLogout() {
+    logout();
+    navigate('/gestion-clc/login');
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar escritorio */}
       <aside className="hidden md:flex flex-col w-60 bg-[#063E7B] flex-shrink-0">
-        <Sidebar />
+        <Sidebar
+          navItems={navItems}
+          userEmail={user?.email}
+          onNavigate={() => setMobileOpen(false)}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Sidebar móvil */}
@@ -90,7 +104,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="fixed inset-0 z-40 flex md:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <aside className="relative w-60 bg-[#063E7B] z-50">
-            <Sidebar />
+            <Sidebar
+              navItems={navItems}
+              userEmail={user?.email}
+              onNavigate={() => setMobileOpen(false)}
+              onLogout={handleLogout}
+            />
           </aside>
         </div>
       )}

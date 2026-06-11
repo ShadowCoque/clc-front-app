@@ -208,7 +208,7 @@ export interface CreateAreaDto {
   activa?: boolean;
 }
 
-export interface UpdateAreaDto extends Partial<CreateAreaDto> {}
+export type UpdateAreaDto = Partial<CreateAreaDto>;
 
 export interface CreateColaboradorDto {
   nombre: string;
@@ -217,7 +217,7 @@ export interface CreateColaboradorDto {
   activo?: boolean;
 }
 
-export interface UpdateColaboradorDto extends Partial<CreateColaboradorDto> {}
+export type UpdateColaboradorDto = Partial<CreateColaboradorDto>;
 
 export interface CreatePreguntaDto {
   areaId: number;
@@ -228,4 +228,4 @@ export interface CreatePreguntaDto {
   activa?: boolean;
 }
 
-export interface UpdatePreguntaDto extends Partial<Omit<CreatePreguntaDto, 'areaId'>> {}
+export type UpdatePreguntaDto = Partial<Omit<CreatePreguntaDto, 'areaId'>>;

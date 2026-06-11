@@ -1,6 +1,7 @@
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  type XAxisTickContentProps, type YAxisTickContentProps,
 } from 'recharts';
 import type { ReporteResumen } from '../../types';
 import { getAreaShortName } from '../../utils/areaLabels';
@@ -261,7 +262,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                   dataKey="name"
                   width={260}
                   interval={0}
-                  tick={(props: any) => {
+                  tick={(props: YAxisTickContentProps) => {
                     const { x, y, payload } = props;
                     const idx = typeof payload?.index === 'number' ? payload.index : 0;
                     const full = siNoData[idx]?.fullText ?? String(payload?.value ?? '');
@@ -287,7 +288,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
-                    const item = (payload[0] as any)?.payload;
+                    const item = payload[0]?.payload as (typeof siNoData)[number] | undefined;
                     return (
                       <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm shadow-lg max-w-xs">
                         <p className="font-semibold text-gray-700 mb-1">{item?.fullText}</p>
@@ -320,7 +321,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                 dataKey="name"
                 interval={0}
                 height={56}
-                tick={(props: any) => {
+                tick={(props: XAxisTickContentProps) => {
                   const { x, y, payload } = props;
                   const idx = typeof payload?.index === 'number' ? payload.index : 0;
                   const item = colaboradoresData[idx];
@@ -342,7 +343,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
-                  const item = (payload[0] as any)?.payload;
+                  const item = payload[0]?.payload as (typeof colaboradoresData)[number] | undefined;
                   return (
                     <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm shadow-lg">
                       <p className="font-semibold text-gray-700">{label}</p>

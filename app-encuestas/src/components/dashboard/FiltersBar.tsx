@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { SearchIcon, FilterIcon, XIcon, DownloadIcon } from 'lucide-react';
 import { getAreas } from '../../api/areas';
@@ -29,7 +29,12 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
     queryFn: () => getColaboradores(areaId ? Number(areaId) : undefined),
   });
 
-  useEffect(() => { setColaboradorId(''); }, [areaId]);
+  // Al cambiar de área se limpia el colaborador (se hace en el onChange del
+  // select de área, no en un efecto, para evitar renders en cascada).
+  function handleAreaChange(value: string) {
+    setAreaId(value);
+    setColaboradorId('');
+  }
 
   // Solo colaboradores activos (igual que áreas, que el endpoint público ya filtra)
   const colaboradoresActivos = colaboradores.filter(c => c.activo !== false);
@@ -77,7 +82,7 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
         <h3 className="font-medium text-gray-700 text-sm">Filtros</h3>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-        <Select value={areaId} onChange={(e) => setAreaId(e.target.value)} placeholder="Todas las áreas" label="Área">
+        <Select value={areaId} onChange={(e) => handleAreaChange(e.target.value)} placeholder="Todas las áreas" label="Área">
           {areas.map((a) => (
             <option key={a.id} value={a.id}>{a.nombre}</option>
           ))}

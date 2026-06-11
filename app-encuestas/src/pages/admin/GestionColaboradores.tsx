@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PlusIcon, PencilIcon } from 'lucide-react';
@@ -108,30 +108,28 @@ function ModalColaborador({
 export function GestionColaboradores() {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialAreaFiltro = searchParams.get('areaId') ?? '';
-  const [areaFiltro, setAreaFiltro] = useState(initialAreaFiltro);
+  // La URL es la única fuente de verdad del filtro; no se duplica en estado.
+  const areaFiltro = searchParams.get('areaId') ?? '';
+  // ?nuevo=1 (enlace desde Áreas) abre directamente el modal de creación.
+  const nuevoDesdeUrl = searchParams.get('nuevo') === '1';
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState<Colaborador | undefined>();
+  const modalAbierto = modal || nuevoDesdeUrl;
 
   const { data: areas = [] } = useQuery({
     queryKey: ['areas-admin'],
     queryFn: getAreasAdmin,
   });
 
-  useEffect(() => {
-    const urlAreaId = searchParams.get('areaId') ?? '';
-    if (urlAreaId !== areaFiltro) setAreaFiltro(urlAreaId);
-    // Si llegamos con ?nuevo=1 abrimos directamente el modal de creación
-    if (searchParams.get('nuevo') === '1') {
-      setEditando(undefined);
-      setModal(true);
+  function cerrarModal() {
+    setModal(false);
+    setEditando(undefined);
+    if (nuevoDesdeUrl) {
       const next = new URLSearchParams(searchParams);
       next.delete('nuevo');
       setSearchParams(next, { replace: true });
     }
-    // solo reaccionar a cambios reales en la URL
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }
 
   const { data: colaboradores = [], isLoading } = useQuery({
     queryKey: ['colaboradores-admin', areaFiltro],
@@ -150,7 +148,6 @@ export function GestionColaboradores() {
   }
 
   function handleFiltroArea(value: string) {
-    setAreaFiltro(value);
     if (value) {
       setSearchParams({ areaId: value });
     } else {
@@ -287,12 +284,12 @@ export function GestionColaboradores() {
         )}
       </div>
 
-      {modal && (
+      {modalAbierto && (
         <ModalColaborador
           colaborador={editando}
           areas={areas}
           defaultAreaId={defaultAreaId}
-          onClose={() => { setModal(false); setEditando(undefined); }}
+          onClose={cerrarModal}
         />
       )}
     </AdminLayout>
