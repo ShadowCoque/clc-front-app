@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, EyeIcon, XIcon, UserIcon, BuildingIcon, ThumbsUpIcon, ThumbsDownIcon, StarIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, EyeIcon, XIcon, UserIcon, BuildingIcon, CalendarIcon, ThumbsUpIcon, ThumbsDownIcon, StarIcon } from 'lucide-react';
 import type { EncuestaReporte, PaginacionMeta } from '../../types';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
@@ -179,47 +179,58 @@ export function EncuestasTable({ encuestas, meta, onPageChange }: EncuestasTable
       {detalle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="flex items-start justify-between px-5 py-4 bg-[#063E7B] text-white flex-shrink-0 gap-3">
-              <div className="min-w-0">
-                <h2 className="font-bold text-base leading-tight">Detalle de encuesta</h2>
-                <p className="text-white/60 text-xs mt-1">
-                  #{detalle.id}
-                  {(detalle.fecha ?? detalle.fechaDia) && (
-                    <span className="ml-2">
-                      {detalle.fecha ?? detalle.fechaDia}{detalle.hora ? ` · ${detalle.hora}` : ''}
-                    </span>
-                  )}
-                </p>
-              </div>
+            {/* Cabecera visual */}
+            <div className="relative bg-[#063E7B] px-5 pt-5 pb-4 flex-shrink-0 overflow-hidden">
+              {/* Círculos decorativos de fondo */}
+              <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/5 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-20 h-20 rounded-full bg-[#D0A23E]/10 pointer-events-none" />
+
+              {/* Botón cerrar */}
               <button
                 onClick={() => setDetalle(null)}
-                className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors mt-0.5"
+                className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors"
               >
-                <XIcon className="w-4 h-4" />
+                <XIcon className="w-3.5 h-3.5 text-white" />
               </button>
-            </div>
 
-            {/* Meta info — tres chips en fila, sin grid que genere solapamientos */}
-            <div className="flex flex-col gap-2 px-5 py-3 bg-[#f8fafc] border-b border-[#C2CFDB] flex-shrink-0">
-              <div className="flex items-start gap-2 text-sm">
-                <UserIcon className="w-4 h-4 text-[#063E7B] flex-shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Socio</p>
-                  <p className="font-medium text-gray-800 break-words leading-snug">
+              {/* Avatar + datos principales */}
+              <div className="flex items-start gap-3.5 pr-8">
+                {/* Avatar con inicial */}
+                <div className="w-11 h-11 rounded-xl bg-[#D0A23E] flex items-center justify-center flex-shrink-0 shadow-md">
+                  <span className="text-white font-bold text-lg leading-none select-none">
+                    {(detalle.nombreSocio ?? 'A').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-white/50 text-[10px] uppercase tracking-wider font-semibold mb-0.5">Socio</p>
+                  <p className="text-white font-semibold text-[15px] leading-snug break-words">
                     <SocioLabel nombre={detalle.nombreSocio} />
                   </p>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <BuildingIcon className="w-3 h-3 text-white/40 flex-shrink-0" />
+                    <span className="text-white/70 text-xs break-words">{getAreaNombre(detalle)}</span>
+                    {getColaboradorNombre(detalle) !== '—' && (
+                      <>
+                        <span className="text-white/30 text-xs">·</span>
+                        <UserIcon className="w-3 h-3 text-white/40 flex-shrink-0" />
+                        <span className="text-white/70 text-xs break-words">{getColaboradorNombre(detalle)}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-2 text-sm">
-                <BuildingIcon className="w-4 h-4 text-[#063E7B] flex-shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Área / Colaborador</p>
-                  <p className="font-medium text-gray-800 break-words leading-snug">{getAreaNombre(detalle)}</p>
-                  {getColaboradorNombre(detalle) !== '—' && (
-                    <p className="text-xs text-gray-500 break-words">{getColaboradorNombre(detalle)}</p>
-                  )}
+
+              {/* Franja inferior: fecha y ID */}
+              <div className="mt-3.5 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <CalendarIcon className="w-3 h-3 text-white/40 flex-shrink-0" />
+                  <span className="text-white/60 text-[11px]">
+                    {detalle.fecha ?? detalle.fechaDia ?? '—'}
+                    {detalle.hora ? ` · ${detalle.hora}` : ''}
+                  </span>
                 </div>
+                <span className="text-white/25 text-[10px] font-mono">#{detalle.id}</span>
               </div>
             </div>
 
