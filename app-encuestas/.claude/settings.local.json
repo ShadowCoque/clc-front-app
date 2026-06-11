@@ -10,7 +10,11 @@
       "Bash(npx tsc *)",
       "WebFetch(domain:github.com)",
       "PowerShell(npm run *)",
-      "PowerShell(npx eslint src/pages/admin/GestionAreas.tsx src/pages/public/Encuesta.tsx src/utils/preguntaNombre.ts src/components/dashboard/SocioLabel.tsx src/components/preguntas/PreguntaEscala.tsx src/components/dashboard/EncuestasTable.tsx src/components/dashboard/ComentariosTable.tsx)"
+      "PowerShell(npx eslint src/pages/admin/GestionAreas.tsx src/pages/public/Encuesta.tsx src/utils/preguntaNombre.ts src/components/dashboard/SocioLabel.tsx src/components/preguntas/PreguntaEscala.tsx src/components/dashboard/EncuestasTable.tsx src/components/dashboard/ComentariosTable.tsx)",
+      "PowerShell(gh repo view ShadowCoque/clc-back-app --json name,defaultBranchRef -q '.defaultBranchRef.name')",
+      "PowerShell(gh api *)",
+      "Bash(cd /tmp)",
+      "Bash(gh api *)"
     ]
   }
 }
