@@ -48,7 +48,7 @@ Usar:
 - React (versión a confirmar por ti --> puedes ejecutar comandos para ver)
 - Vite
 - TypeScript
-- React Router v6
+- React Router v7
 - TanStack Query / React Query
 - Axios
 - React Hook Form
@@ -177,15 +177,17 @@ Validar rango 1-10.
 Mostrar visualmente como botones, chips o escala horizontal clara.
 Debe ser fácil de usar en móvil.
 
-## Rate limit
+## Errores del POST /encuestas
 
-El backend responde 429 si la misma IP ya envió encuesta para la misma área en el mismo día Ecuador.
+El backend NO tiene rate limit por IP (se eliminó a propósito porque varios socios
+comparten IP pública por NAT). El 429 ya no existe: un 400 o 500 del POST /encuestas
+se trata como error normal con mensaje entendible.
 
-El frontend debe mostrar:
+## Cache HTTP de endpoints públicos
 
-"Ya enviaste una encuesta para esta área hoy. ¡Gracias por tu participación!"
-
-No tratar 429 como error técnico.
+GET /areas, GET /areas/:slug y GET /preguntas?areaId= responden con
+`Cache-Control: public, max-age=60`. Un cambio hecho por un admin puede tardar
+hasta 60 segundos en reflejarse en el formulario público — NO es un bug.
 
 Endpoints públicos
 GET /areas
@@ -229,7 +231,6 @@ Posibles respuestas importantes:
 
 200/201: encuesta registrada.
 400: validación incorrecta.
-429: ya envió encuesta hoy.
 500: error inesperado.
 Endpoints de autenticación
 POST /auth/login
@@ -415,7 +416,6 @@ Si URL trae colaborador={id}, preseleccionar ese colaborador y bloquear edición
 Renderizar preguntas por tipo.
 Validar con React Hook Form + Zod.
 Enviar POST /encuestas.
-Manejar 429 de forma amable.
 Al éxito, navegar a /gracias.
 /gracias
 

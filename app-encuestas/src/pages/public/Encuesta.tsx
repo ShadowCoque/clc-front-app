@@ -200,9 +200,7 @@ export function Encuesta() {
       });
       navigate('/gracias');
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 429) {
-        setSubmitError('Ya enviaste una encuesta para esta área hoy. ¡Gracias por tu participación!');
-      } else if (axios.isAxiosError(err) && err.response?.status === 400) {
+      if (axios.isAxiosError(err) && err.response?.status === 400) {
         setSubmitError('Por favor revisa los datos ingresados e inténtalo nuevamente.');
       } else {
         setSubmitError('Ocurrió un error al enviar. Inténtalo nuevamente.');
@@ -223,6 +221,7 @@ export function Encuesta() {
                 <img
                   src={area.imagenUrl}
                   alt={area.nombre}
+                  decoding="async"
                   className="w-full h-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
@@ -328,11 +327,7 @@ export function Encuesta() {
               })}
 
               {submitError && (
-                <div className={`rounded-lg px-4 py-3 text-sm ${
-                  submitError.includes('Ya enviaste')
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}>
+                <div className="rounded-lg px-4 py-3 text-sm bg-red-50 text-red-700 border border-red-200">
                   {submitError}
                 </div>
               )}

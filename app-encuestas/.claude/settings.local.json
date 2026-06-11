@@ -14,7 +14,15 @@
       "PowerShell(gh repo view ShadowCoque/clc-back-app --json name,defaultBranchRef -q '.defaultBranchRef.name')",
       "PowerShell(gh api *)",
       "Bash(cd /tmp)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "PowerShell(Get-ChildItem public\\\\areas | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB\\)}} | Sort-Object KB -Descending)",
+      "PowerShell(npm ls *)",
+      "PowerShell(npm install *)",
+      "PowerShell(node scripts\\\\optimizar-imagenes.mjs)",
+      "PowerShell(Get-ChildItem public -File | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB\\)}} | Sort-Object KB -Descending)",
+      "PowerShell($areas = \\(Get-ChildItem dist\\\\areas -File | Measure-Object Length -Sum\\).Sum; $total = \\(Get-ChildItem dist -Recurse -File | Measure-Object Length -Sum\\).Sum; \"dist/areas: $\\([math]::Round\\($areas/1KB\\)\\) KB - dist total: $\\([math]::Round\\($total/1KB\\)\\) KB\")",
+      "PowerShell(Get-ChildItem public -File | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}})",
+      "PowerShell(git ls-files *)"
     ]
   }
 }

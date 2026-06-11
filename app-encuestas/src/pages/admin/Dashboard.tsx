@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardListIcon, StarIcon, TrendingUpIcon, MessageSquareIcon, ThumbsUpIcon } from 'lucide-react';
 import { getResumen, getEncuestas, exportarExcel } from '../../api/reportes';
-import { getPreguntas } from '../../api/preguntas';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { FiltersBar } from '../../components/dashboard/FiltersBar';
 import { KpiCard } from '../../components/dashboard/KpiCard';
@@ -28,23 +27,6 @@ export function Dashboard() {
     queryKey: ['encuestas', filtros, encuestasPage],
     queryFn: () => getEncuestas({ ...filtros, page: encuestasPage, limit: 20 }),
   });
-
-  const areaIds = useMemo(
-    () => (resumen?.areas ?? []).map((a) => a.areaId).sort((a, b) => a - b),
-    [resumen],
-  );
-
-  const { data: todasPreguntas = [] } = useQuery({
-    queryKey: ['preguntas-dashboard', areaIds],
-    queryFn: () => Promise.all(areaIds.map(getPreguntas)).then((r) => r.flat()),
-    enabled: areaIds.length > 0,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const preguntaMap = useMemo<Record<number, string>>(
-    () => Object.fromEntries(todasPreguntas.map((p) => [p.id, p.texto])),
-    [todasPreguntas],
-  );
 
   function handleFilter(f: ReporteFiltros) {
     setFiltros(f);
@@ -137,7 +119,6 @@ export function Dashboard() {
                 encuestas={encuestasData?.data ?? []}
                 meta={encuestasData?.meta}
                 onPageChange={setEncuestasPage}
-                preguntaMap={preguntaMap}
               />
             )
           ) : (

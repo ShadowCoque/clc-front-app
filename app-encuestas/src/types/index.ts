@@ -156,6 +156,7 @@ export interface RespuestaReporte {
   preguntaId: number;
   textoPregunta?: string;
   tipo?: TipoPregunta;
+  pregunta?: { id: number; texto: string; tipo: TipoPregunta; orden: number };
   valorBooleano?: boolean | null;
   valorTexto?: string | null;
   valorNumero?: number | null;
