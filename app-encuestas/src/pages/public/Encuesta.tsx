@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useForm, Controller, type Resolver } from 'react-hook-form';
@@ -16,6 +16,7 @@ import { Select } from '../../components/ui/Select';
 import { Spinner } from '../../components/ui/Spinner';
 import { ErrorState } from '../../components/ui/ErrorState';
 import type { Pregunta, RespuestaSubmit } from '../../types';
+import { esTextoNombreSocio } from '../../utils/preguntaNombre';
 import axios from 'axios';
 
 type FormValues = Record<string, boolean | string | number | undefined>;
@@ -23,7 +24,6 @@ type FormValues = Record<string, boolean | string | number | undefined>;
 // El backend ya filtra activas; no re-filtrar aquí.
 function buildSchema(preguntas: Pregunta[]) {
   const shape: Record<string, z.ZodTypeAny> = {};
-  const tieneNombreSocio = preguntas.some((p) => p.tipo === 'NOMBRE_SOCIO');
   for (const p of preguntas) {
     const key = `pregunta_${p.id}`;
     if (p.tipo === 'SI_NO' && p.obligatoria) {
@@ -34,16 +34,12 @@ function buildSchema(preguntas: Pregunta[]) {
       const base = z.number({ error: 'Esta pregunta es obligatoria' }).min(1, 'Mínimo 1').max(10, 'Máximo 10');
       shape[key] = p.obligatoria ? base : base.optional();
     } else if (p.obligatoria) {
-      shape[key] = z.string({ error: 'Este campo es obligatorio' }).min(1, 'Este campo es obligatorio');
+      // trim: una respuesta de solo espacios no cuenta como respondida.
+      shape[key] = z.string({ error: 'Este campo es obligatorio' }).trim().min(1, 'Este campo es obligatorio');
     } else {
       shape[key] = z.string().optional();
     }
   }
-  // Solo se valida nombreSocio si el admin configuró la pregunta NOMBRE_SOCIO.
-  // Si no, el frontend envía 'Anónimo' al backend (campo requerido en el payload).
-  shape['nombreSocio'] = tieneNombreSocio
-    ? z.string().min(1, 'El nombre del socio es obligatorio')
-    : z.string().optional();
   return z.object(shape);
 }
 
@@ -53,7 +49,9 @@ export function Encuesta() {
   const slug = params.get('area') ?? '';
   const colaboradorParam = params.get('colaborador');
 
-  const [colaboradorId, setColaboradorId] = useState<string>(colaboradorParam ?? '');
+  // Selección manual del usuario; el valor efectivo se deriva más abajo.
+  const [colaboradorManual, setColaboradorManual] = useState('');
+  const [colabError, setColabError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,8 +62,17 @@ export function Encuesta() {
     retry: false,
   });
 
-  // Backend ya devuelve solo activas/activos — no re-filtrar
-  const preguntas = [...(area?.preguntas ?? [])].sort((a, b) => a.orden - b.orden);
+  // Backend ya devuelve solo activas/activos — no re-filtrar.
+  // Si una pregunta de texto pide el nombre del socio (p. ej. el admin la creó
+  // como DESCRIPCION en lugar de NOMBRE_SOCIO), se trata como NOMBRE_SOCIO para
+  // que la encuesta no se registre como "Anónimo".
+  const preguntas: Pregunta[] = [...(area?.preguntas ?? [])]
+    .sort((a, b) => a.orden - b.orden)
+    .map((p) =>
+      p.tipo === 'DESCRIPCION' && esTextoNombreSocio(p.texto)
+        ? { ...p, tipo: 'NOMBRE_SOCIO' }
+        : p,
+    );
   const colaboradores = area?.colaboradores ?? [];
 
   // El param ?colaborador=X solo se respeta si ese id pertenece al área cargada.
@@ -73,21 +80,20 @@ export function Encuesta() {
     !!colaboradorParam &&
     colaboradores.some((c) => c.id === Number(colaboradorParam));
 
+  // Valor efectivo derivado: param válido > selección manual (si sigue siendo
+  // un colaborador del área) > único colaborador activo > sin selección.
+  const colaboradorId = colaboradorParamValido
+    ? String(colaboradorParam)
+    : colaboradorManual && colaboradores.some((c) => String(c.id) === colaboradorManual)
+      ? colaboradorManual
+      : colaboradores.length === 1
+        ? String(colaboradores[0].id)
+        : '';
+
   const schema = buildSchema(preguntas);
-  const { control, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
+  const { control, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
   });
-
-  useEffect(() => {
-    if (!area) return;
-    if (colaboradorParamValido) {
-      setColaboradorId(String(colaboradorParam));
-    } else if (colaboradores.length === 1) {
-      setColaboradorId(String(colaboradores[0].id));
-    } else {
-      setColaboradorId('');
-    }
-  }, [area]);
 
   if (!slug) {
     return (
@@ -153,11 +159,19 @@ export function Encuesta() {
     );
   }
 
-  async function onSubmit(data: FormValues) {
+  // El error del colaborador debe aparecer junto con los errores de los demás
+  // campos, no solo cuando el resto del formulario ya es válido.
+  function validarColaborador(): boolean {
     if (colaboradores.length > 0 && !colaboradorId) {
-      setSubmitError('Por favor selecciona quién le atendió antes de enviar.');
-      return;
+      setColabError('Por favor selecciona quién le atendió.');
+      return false;
     }
+    setColabError('');
+    return true;
+  }
+
+  async function onSubmit(data: FormValues) {
+    if (!validarColaborador()) return;
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -167,12 +181,17 @@ export function Encuesta() {
           const r: RespuestaSubmit = { preguntaId: p.id };
           if (p.tipo === 'SI_NO' && val !== undefined) r.valorBooleano = val as boolean;
           else if (p.tipo === 'ESCALA_1_10' && val !== undefined) r.valorNumero = val as number;
-          else if (val !== undefined && val !== '') r.valorTexto = String(val);
+          else if (val !== undefined && String(val).trim() !== '') r.valorTexto = String(val).trim();
           return r;
         })
         .filter((r) => r.valorBooleano !== undefined || r.valorTexto !== undefined || r.valorNumero !== undefined);
 
-      const nombreSocioRaw = String(data['nombreSocio'] ?? '').trim();
+      // El nombre del socio sale de la respuesta a la pregunta de nombre;
+      // sin esa pregunta (o vacía y opcional) la encuesta queda como 'Anónimo'.
+      const preguntaNombre = preguntas.find((p) => p.tipo === 'NOMBRE_SOCIO');
+      const nombreSocioRaw = preguntaNombre
+        ? String(data[`pregunta_${preguntaNombre.id}`] ?? '').trim()
+        : '';
       await submitEncuesta({
         areaId: area!.id,
         ...(colaboradorId ? { colaboradorId: Number(colaboradorId) } : {}),
@@ -219,11 +238,12 @@ export function Encuesta() {
             {/* Selección de colaborador */}
             {colaboradores.length > 1 && (
               <Select
-                label="¿Quién le atendió?"
+                label="¿Quién le atendió? *"
                 value={colaboradorId}
-                onChange={(e) => setColaboradorId(e.target.value)}
+                onChange={(e) => { setColaboradorManual(e.target.value); setColabError(''); }}
                 placeholder="Selecciona un colaborador"
                 disabled={colaboradorParamValido}
+                error={colabError}
               >
                 {colaboradores.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -233,7 +253,7 @@ export function Encuesta() {
               </Select>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
+            <form onSubmit={handleSubmit(onSubmit, () => validarColaborador())} className="space-y-7">
               {preguntas.map((p) => {
                 const key = `pregunta_${p.id}` as const;
                 const error = errors[key]?.message as string | undefined;
@@ -282,10 +302,7 @@ export function Encuesta() {
                         <PreguntaNombreSocio
                           pregunta={p}
                           value={field.value as string | undefined}
-                          onChange={(v) => {
-                            field.onChange(v);
-                            setValue('nombreSocio', v);
-                          }}
+                          onChange={(v) => field.onChange(v)}
                           error={error}
                         />
                       )}

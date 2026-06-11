@@ -7,7 +7,10 @@
       "Bash(not exist *)",
       "Bash(npx prisma *)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "WebFetch(domain:github.com)",
+      "PowerShell(npm run *)",
+      "PowerShell(npx eslint src/pages/admin/GestionAreas.tsx src/pages/public/Encuesta.tsx src/utils/preguntaNombre.ts src/components/dashboard/SocioLabel.tsx src/components/preguntas/PreguntaEscala.tsx src/components/dashboard/EncuestasTable.tsx src/components/dashboard/ComentariosTable.tsx)"
     ]
   }
 }

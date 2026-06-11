@@ -3,6 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon, EyeIcon, XIcon, UserIcon, BuildingIc
 import type { EncuestaReporte, PaginacionMeta } from '../../types';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { SocioLabel } from './SocioLabel';
 
 interface EncuestasTableProps {
   encuestas: EncuestaReporte[];
@@ -90,7 +91,7 @@ export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: E
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{e.hora ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{getAreaNombre(e)}</td>
                   <td className="px-4 py-3 text-gray-700">{getColaboradorNombre(e)}</td>
-                  <td className="px-4 py-3 text-gray-700">{e.nombreSocio ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-700"><SocioLabel nombre={e.nombreSocio} /></td>
                   <td className="px-4 py-3 text-center">
                     {escalaVal != null ? (
                       <span className={`inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold ${escalaBadgeClass(escalaVal)}`}>
@@ -133,7 +134,7 @@ export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: E
                       {e.fecha ?? e.fechaDia ?? '—'} · {e.hora ?? '—'}
                     </div>
                     <div className="font-medium text-gray-800 truncate mt-0.5">
-                      {e.nombreSocio ?? '—'}
+                      <SocioLabel nombre={e.nombreSocio} />
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5 truncate">
                       {getAreaNombre(e)} · {getColaboradorNombre(e)}
@@ -198,7 +199,7 @@ export function EncuestasTable({ encuestas, meta, onPageChange, preguntaMap }: E
                 <UserIcon className="w-4 h-4 text-[#063E7B] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-gray-400">Socio</p>
-                  <p className="font-medium text-gray-800 truncate">{detalle.nombreSocio ?? '—'}</p>
+                  <p className="font-medium text-gray-800 truncate"><SocioLabel nombre={detalle.nombreSocio} /></p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-sm">

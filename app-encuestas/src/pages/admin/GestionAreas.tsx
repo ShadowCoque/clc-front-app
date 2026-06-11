@@ -5,7 +5,7 @@ import {
   PlusIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon,
   AlertTriangleIcon, UsersIcon, HelpCircleIcon, PowerOffIcon,
 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAreasAdmin, createArea, updateArea } from '../../api/areas';
@@ -18,6 +18,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { Badge } from '../../components/ui/Badge';
 import { Spinner } from '../../components/ui/Spinner';
 import type { Area, Pregunta, TipoPregunta } from '../../types';
+import { esTextoNombreSocio } from '../../utils/preguntaNombre';
 import axios from 'axios';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -40,11 +41,11 @@ const preguntaSchema = z.object({
 });
 type PreguntaForm = z.infer<typeof preguntaSchema>;
 
-const TIPOS_PREGUNTA: { value: TipoPregunta; label: string }[] = [
-  { value: 'SI_NO', label: 'Sí / No' },
-  { value: 'DESCRIPCION', label: 'Descripción (texto)' },
-  { value: 'NOMBRE_SOCIO', label: 'Nombre del socio' },
-  { value: 'ESCALA_1_10', label: 'Escala 1 al 10' },
+const TIPOS_PREGUNTA: { value: TipoPregunta; label: string; hint: string }[] = [
+  { value: 'SI_NO', label: 'Sí / No', hint: 'El socio responde con botones grandes Sí / No.' },
+  { value: 'DESCRIPCION', label: 'Descripción (texto)', hint: 'Texto libre. Se muestra como comentario en los reportes.' },
+  { value: 'NOMBRE_SOCIO', label: 'Nombre del socio', hint: 'Identifica al socio: su respuesta se registra como el nombre del socio en los reportes. Sin esta pregunta la encuesta aparece como "Anónimo".' },
+  { value: 'ESCALA_1_10', label: 'Escala 1 al 10', hint: 'Calificación del 1 al 10. Alimenta el promedio de escala y el NPS.' },
 ];
 
 // ─── Modal Area ───────────────────────────────────────────────────────────────
@@ -110,12 +111,19 @@ function ModalPregunta({ areaId, pregunta, onClose }: { areaId: number; pregunta
   const isEdit = !!pregunta;
   const [serverError, setServerError] = useState('');
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<PreguntaForm>({
+  const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<PreguntaForm>({
     resolver: zodResolver(preguntaSchema),
     defaultValues: pregunta
       ? { texto: pregunta.texto, tipo: pregunta.tipo, orden: pregunta.orden, obligatoria: pregunta.obligatoria, activa: pregunta.activa }
       : { tipo: 'SI_NO', obligatoria: true, activa: true, orden: 1 },
   });
+
+  const tipoActual = useWatch({ control, name: 'tipo' });
+  const textoActual = useWatch({ control, name: 'texto' });
+  const hintTipo = TIPOS_PREGUNTA.find((t) => t.value === tipoActual)?.hint;
+  // El error más común: crear la pregunta del nombre del socio como texto libre,
+  // lo que hace que todas las encuestas se registren como "Anónimo".
+  const pareceNombreSocio = tipoActual !== 'NOMBRE_SOCIO' && esTextoNombreSocio(textoActual ?? '');
 
   async function onSubmit(data: PreguntaForm) {
     setServerError('');
@@ -145,11 +153,32 @@ function ModalPregunta({ areaId, pregunta, onClose }: { areaId: number; pregunta
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
           <Textarea label="Texto de la pregunta" {...register('texto')} error={errors.texto?.message} />
-          <Select label="Tipo" {...register('tipo')} error={errors.tipo?.message}>
-            {TIPOS_PREGUNTA.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </Select>
+          <div>
+            <Select label="Tipo" {...register('tipo')} error={errors.tipo?.message}>
+              {TIPOS_PREGUNTA.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </Select>
+            {hintTipo && <p className="text-xs text-gray-400 mt-1">{hintTipo}</p>}
+          </div>
+          {pareceNombreSocio && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertTriangleIcon className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-amber-700 space-y-1.5">
+                <p>
+                  Esta pregunta parece pedir el nombre del socio. Con el tipo actual, la respuesta
+                  se guarda solo como texto y las encuestas aparecerán como <strong>"Anónimo"</strong> en los reportes.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setValue('tipo', 'NOMBRE_SOCIO', { shouldValidate: true })}
+                  className="font-semibold underline text-amber-800 hover:text-amber-900"
+                >
+                  Cambiar a tipo "Nombre del socio"
+                </button>
+              </div>
+            </div>
+          )}
           <Input
             label="Orden"
             type="number"

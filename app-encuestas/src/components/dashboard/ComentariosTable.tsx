@@ -3,6 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import type { RespuestaTexto } from '../../types';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { SocioLabel } from './SocioLabel';
 
 interface ComentariosTableProps {
   comentarios: RespuestaTexto[];
@@ -42,7 +43,7 @@ export function ComentariosTable({ comentarios }: ComentariosTableProps) {
                 <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{c.fecha}</td>
                 <td className="px-4 py-3 text-gray-700">{c.area}</td>
                 <td className="px-4 py-3 text-gray-700">{c.colaborador ?? '—'}</td>
-                <td className="px-4 py-3 text-gray-700">{c.nombreSocio}</td>
+                <td className="px-4 py-3 text-gray-700"><SocioLabel nombre={c.nombreSocio} /></td>
                 <td className="px-4 py-3 text-gray-600 max-w-xs">{c.texto}</td>
               </tr>
             ))}
@@ -55,7 +56,7 @@ export function ComentariosTable({ comentarios }: ComentariosTableProps) {
         {filasPagina.map((c, i) => (
           <li key={i} className="bg-white rounded-xl border border-[#C2CFDB] p-3">
             <div className="text-[11px] text-gray-400">{c.fecha} · {c.area}</div>
-            <div className="font-medium text-gray-800 mt-0.5 truncate">{c.nombreSocio}</div>
+            <div className="font-medium text-gray-800 mt-0.5 truncate"><SocioLabel nombre={c.nombreSocio} /></div>
             {c.colaborador && (
               <div className="text-xs text-gray-500 mt-0.5 truncate">{c.colaborador}</div>
             )}

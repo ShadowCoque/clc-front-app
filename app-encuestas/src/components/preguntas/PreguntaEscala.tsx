@@ -26,7 +26,8 @@ export function PreguntaEscala({ pregunta, value, onChange, error }: PreguntaEsc
         {pregunta.texto}
         {pregunta.obligatoria && <span className="text-red-500 ml-1">*</span>}
       </p>
-      <div className="grid grid-cols-10 gap-1">
+      {/* En móvil 2 filas de 5 para que cada botón sea cómodo de tocar */}
+      <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 sm:gap-1">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <button
             key={n}
@@ -43,8 +44,8 @@ export function PreguntaEscala({ pregunta, value, onChange, error }: PreguntaEsc
         ))}
       </div>
       <div className="flex justify-between text-xs text-gray-400 px-1">
-        <span>Muy malo</span>
-        <span>Excelente</span>
+        <span>1 = Muy malo</span>
+        <span>10 = Excelente</span>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
