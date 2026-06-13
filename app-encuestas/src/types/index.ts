@@ -2,7 +2,7 @@
 
 export type TipoPregunta = 'SI_NO' | 'DESCRIPCION' | 'NOMBRE_SOCIO' | 'ESCALA_1_10';
 
-export type RolUsuario = 'ADMIN' | 'GERENTE' | 'REPORTES';
+export type RolUsuario = 'ADMIN' | 'REPORTES';
 
 // ─── Entidades principales ────────────────────────────────────────────────────
 
@@ -45,6 +45,21 @@ export interface Usuario {
   nombre: string;
   email: string;
   rol: RolUsuario;
+  // Áreas a las que está limitado el usuario (solo aplica a REPORTES).
+  // Vacío o ausente = ve todas las áreas.
+  areasPermitidas?: number[];
+}
+
+// Forma completa que devuelve el módulo admin de usuarios (GET /usuarios).
+export interface UsuarioAdmin {
+  id: number;
+  nombre: string;
+  email: string;
+  rol: RolUsuario;
+  activo: boolean;
+  areasPermitidas: number[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── Encuesta submit ──────────────────────────────────────────────────────────
@@ -230,3 +245,18 @@ export interface CreatePreguntaDto {
 }
 
 export type UpdatePreguntaDto = Partial<Omit<CreatePreguntaDto, 'areaId'>>;
+
+export interface CreateUsuarioDto {
+  nombre: string;
+  email: string;
+  rol: RolUsuario;
+  password: string;
+  areasIds?: number[];
+}
+
+export interface UpdateUsuarioDto {
+  nombre?: string;
+  rol?: RolUsuario;
+  activo?: boolean;
+  areasIds?: number[];
+}

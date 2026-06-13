@@ -5,7 +5,7 @@ import { Encuesta } from '../pages/public/Encuesta';
 import { Gracias } from '../pages/public/Gracias';
 import { Spinner } from '../components/ui/Spinner';
 import { PrivateRoute, RoleRoute } from './guards';
-import { Login, Dashboard, GestionAreas, GestionColaboradores } from './adminPages';
+import { Login, Dashboard, GestionAreas, GestionColaboradores, GestionUsuarios } from './adminPages';
 
 const cargandoAdmin = (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -42,6 +42,14 @@ export const routes: RouteObject[] = [
     element: (
       <Suspense fallback={cargandoAdmin}>
         <RoleRoute roles={['ADMIN']}><GestionColaboradores /></RoleRoute>
+      </Suspense>
+    ),
+  },
+  {
+    path: '/gestion-clc/usuarios',
+    element: (
+      <Suspense fallback={cargandoAdmin}>
+        <RoleRoute roles={['ADMIN']}><GestionUsuarios /></RoleRoute>
       </Suspense>
     ),
   },

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { SearchIcon, FilterIcon, XIcon, DownloadIcon } from 'lucide-react';
 import { getAreas } from '../../api/areas';
 import { getColaboradores } from '../../api/colaboradores';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -15,6 +16,7 @@ interface FiltersBarProps {
 }
 
 export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBarProps) {
+  const { user } = useAuth();
   const [areaId, setAreaId] = useState('');
   const [colaboradorId, setColaboradorId] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
@@ -28,6 +30,21 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
     queryKey: ['colaboradores', areaId],
     queryFn: () => getColaboradores(areaId ? Number(areaId) : undefined),
   });
+
+  // Usuarios REPORTES pueden estar limitados a ciertas áreas: solo se muestran
+  // esas y no se ofrece la opción "todas" (pedir otra dispararía un 403).
+  const areasPermitidas = user?.areasPermitidas ?? [];
+  const restringido = areasPermitidas.length > 0;
+  const areasVisibles = restringido
+    ? areas.filter((a) => areasPermitidas.includes(a.id))
+    : areas;
+
+  // Sin opción "todas", el selector debe tener siempre un área concreta.
+  useEffect(() => {
+    if (restringido && !areaId && areasVisibles.length > 0) {
+      setAreaId(String(areasVisibles[0].id));
+    }
+  }, [restringido, areaId, areasVisibles]);
 
   // Al cambiar de área se limpia el colaborador (se hace en el onChange del
   // select de área, no en un efecto, para evitar renders en cascada).
@@ -66,13 +83,16 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
   function handleApply() { onFilter(buildFiltros()); }
 
   function handleClear() {
-    setAreaId('');
+    // El usuario restringido vuelve a su primera área permitida (el efecto la
+    // re-selecciona); el no restringido vuelve a "todas".
+    const areaReset = restringido && areasVisibles.length > 0 ? String(areasVisibles[0].id) : '';
+    setAreaId(areaReset);
     setColaboradorId('');
     setFechaDesde('');
     setFechaHasta('');
     setNombreSocio('');
     setDateKey((k) => k + 1); // fuerza re-mount de los date inputs
-    onFilter({});
+    onFilter(areaReset ? { areaId: Number(areaReset) } : {});
   }
 
   return (
@@ -82,8 +102,13 @@ export function FiltersBar({ onFilter, onExport, exporting = false }: FiltersBar
         <h3 className="font-medium text-gray-700 text-sm">Filtros</h3>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-        <Select value={areaId} onChange={(e) => handleAreaChange(e.target.value)} placeholder="Todas las áreas" label="Área">
-          {areas.map((a) => (
+        <Select
+          value={areaId}
+          onChange={(e) => handleAreaChange(e.target.value)}
+          placeholder={restringido ? undefined : 'Todas las áreas'}
+          label="Área"
+        >
+          {areasVisibles.map((a) => (
             <option key={a.id} value={a.id}>{a.nombre}</option>
           ))}
         </Select>

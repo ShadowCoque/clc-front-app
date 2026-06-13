@@ -132,11 +132,32 @@ interface EncuestaSubmit {
   respuestas: RespuestaSubmit[];
 }
 Usuario
+
+Roles del sistema: solo `ADMIN` y `REPORTES` (el rol `GERENTE` fue eliminado).
+
 interface Usuario {
   id: number;
   nombre: string;
   email: string;
-  rol: 'ADMIN' | 'GERENTE' | 'REPORTES';
+  rol: 'ADMIN' | 'REPORTES';
+  areasPermitidas?: number[]; // ids de áreas; vacío/ausente = ve todas
+}
+
+`areasPermitidas` solo aplica a usuarios `REPORTES`. Llega en la respuesta de
+`POST /auth/login` dentro de `usuario` y se persiste junto al usuario logueado
+(localStorage `clc_usuario`). Si tiene elementos, el Dashboard limita el selector
+de área a esas áreas y no ofrece la opción "todas".
+
+UsuarioAdmin (forma completa que devuelve GET /usuarios)
+interface UsuarioAdmin {
+  id: number;
+  nombre: string;
+  email: string;
+  rol: 'ADMIN' | 'REPORTES';
+  activo: boolean;
+  areasPermitidas: number[];
+  createdAt: string;
+  updatedAt: string;
 }
 Reglas importantes del backend
 Fechas
@@ -267,7 +288,6 @@ PATCH /areas/:id
 Roles esperados:
 
 ADMIN
-GERENTE
 Colaboradores
 GET /colaboradores?areaId=X
 POST /colaboradores
@@ -292,6 +312,33 @@ SI_NO
 DESCRIPCION
 NOMBRE_SOCIO
 ESCALA_1_10
+Usuarios
+
+Todos requieren rol ADMIN (el backend responde 403 si no). API en src/api/usuarios.ts.
+
+GET    /usuarios                -> UsuarioAdmin[]
+POST   /usuarios                body { nombre, email, rol, password, areasIds? } -> UsuarioAdmin
+PATCH  /usuarios/:id            body { nombre?, rol?, activo?, areasIds? } -> UsuarioAdmin (email NO se edita)
+PATCH  /usuarios/:id/password   body { password } -> { ok: true }
+
+Validaciones a replicar en los formularios:
+- nombre: 2–150 caracteres
+- email: formato válido (solo al CREAR; en editar es de solo lectura)
+- password: 8–72 caracteres
+- rol: 'ADMIN' | 'REPORTES'
+- areasIds: solo aplica a REPORTES; si rol = ADMIN se deshabilita el selector
+  de áreas (un ADMIN ve todo y el backend limpia las áreas).
+
+Errores del backend (formato NestJS { statusCode, message, error }), mostrar el message:
+- 409 si el email ya existe (al crear)
+- 400 si un área no existe o falla validación
+- 403 si te quitas tu propio ADMIN, desactivas tu cuenta, o dejarías al
+      sistema sin ningún ADMIN activo
+
+Página: /gestion-clc/usuarios (RoleRoute roles={['ADMIN']}), src/pages/admin/GestionUsuarios.tsx,
+lazy-load en src/router/adminPages.ts. El tab "Usuarios" del AdminLayout solo es
+visible para ADMIN.
+
 Endpoints de reportes
 
 Todos requieren JWT.

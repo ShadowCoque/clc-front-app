@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboardIcon, BuildingIcon, UsersIcon,
+  LayoutDashboardIcon, BuildingIcon, UsersIcon, ShieldIcon,
   LogOutIcon, MenuIcon,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
@@ -20,9 +20,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/gestion-clc/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard', roles: ['ADMIN', 'GERENTE', 'REPORTES'] },
+  { to: '/gestion-clc/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard', roles: ['ADMIN', 'REPORTES'] },
   { to: '/gestion-clc/areas', icon: BuildingIcon, label: 'Áreas y Preguntas', roles: ['ADMIN'] },
   { to: '/gestion-clc/colaboradores', icon: UsersIcon, label: 'Colaboradores', roles: ['ADMIN'] },
+  { to: '/gestion-clc/usuarios', icon: ShieldIcon, label: 'Usuarios', roles: ['ADMIN'] },
 ];
 
 // Declarado a nivel de módulo: crearlo dentro del render haría que React lo
