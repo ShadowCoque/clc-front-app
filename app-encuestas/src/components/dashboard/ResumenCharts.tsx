@@ -126,11 +126,16 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
   // ── Colaboradores (Sí/No) ─────────────────────────────────────────────────
   const colaboradoresData = (resumen.colaboradores ?? [])
     .filter((c) => ((c.totalSi ?? 0) + (c.totalNo ?? 0)) > 0)
-    .map((c) => {
+    .map((c, i) => {
       const nombreCompleto = `${c.nombre} ${c.apellido}`.trim();
       const short = nombreCompleto.length > 20 ? nombreCompleto.slice(0, 20) : nombreCompleto;
       const areaAbbr = getAreaShortName(c.areaNombre);
       return {
+        // El eje X debe agruparse por una clave única, no por el nombre: dos
+        // colaboradores homónimos de áreas distintas comparten categoría y
+        // Recharts resuelve el tooltip buscando la primera fila con ese nombre,
+        // por lo que ambas barras mostrarían los datos del primero.
+        key: `${c.colaboradorId ?? 'c'}-${i}`,
         name: short,
         area: areaAbbr,
         areaNombre: c.areaNombre,
@@ -318,7 +323,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
             <BarChart data={colaboradoresData} margin={{ bottom: 40 }} maxBarSize={48}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
-                dataKey="name"
+                dataKey="key"
                 interval={0}
                 height={56}
                 tick={(props: XAxisTickContentProps) => {
@@ -328,7 +333,7 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
                   return (
                     <g transform={`translate(${x},${y})`}>
                       <text x={0} y={0} dy={12} textAnchor="middle" fill="#374151" fontSize={11}>
-                        {payload?.value}
+                        {item?.name}
                       </text>
                       {item?.area && (
                         <text x={0} y={0} dy={28} textAnchor="middle" fill={COLOR_PRIMARY} fontSize={10} fontWeight={600}>
@@ -341,12 +346,12 @@ export function ResumenCharts({ resumen, showSatisfaccionPorPregunta }: Props) {
               />
               <YAxis allowDecimals={false} />
               <Tooltip
-                content={({ active, payload, label }) => {
+                content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const item = payload[0]?.payload as (typeof colaboradoresData)[number] | undefined;
                   return (
                     <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm shadow-lg">
-                      <p className="font-semibold text-gray-700">{label}</p>
+                      <p className="font-semibold text-gray-700">{item?.name}</p>
                       {item?.areaNombre && <p className="text-xs text-[#063E7B] mb-1">{item.areaNombre}</p>}
                       <p className="text-green-600">Sí: {item?.Sí}</p>
                       <p className="text-red-600">No: {item?.No}</p>

@@ -146,7 +146,12 @@ interface Usuario {
 `areasPermitidas` solo aplica a usuarios `REPORTES`. Llega en la respuesta de
 `POST /auth/login` dentro de `usuario` y se persiste junto al usuario logueado
 (localStorage `clc_usuario`). Si tiene elementos, el Dashboard limita el selector
-de área a esas áreas y no ofrece la opción "todas".
+de área a esas áreas pero SÍ mantiene la opción "Todas las áreas": el backend
+acota la consulta sin `areaId` a las áreas permitidas del usuario. Además,
+`AuthProvider` refresca el perfil con `GET /auth/me` al montar (rol/áreas
+frescos sin re-login) y `login()`/`logout()` limpian la caché de React Query
+para que no sobrevivan reportes de una sesión/permisos anteriores en la misma
+pestaña.
 
 UsuarioAdmin (forma completa que devuelve GET /usuarios)
 interface UsuarioAdmin {
@@ -630,7 +635,9 @@ Token:
 
 Guardar en localStorage como clc_token.
 Agregar a Axios con interceptor.
-Si una respuesta devuelve 401, limpiar token y redirigir a /gestion-clc/login.
+Si una respuesta devuelve 401, limpiar token y redirigir a /gestion-clc/login,
+EXCEPTO cuando el 401 viene del propio POST /auth/login (credenciales
+incorrectas): ese error lo muestra el formulario sin recargar la página.
 
 Decodificar JWT sin librería externa usando atob, validando expiración exp.
 

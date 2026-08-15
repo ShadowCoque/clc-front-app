@@ -22,7 +22,9 @@
       "PowerShell(Get-ChildItem public -File | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB\\)}} | Sort-Object KB -Descending)",
       "PowerShell($areas = \\(Get-ChildItem dist\\\\areas -File | Measure-Object Length -Sum\\).Sum; $total = \\(Get-ChildItem dist -Recurse -File | Measure-Object Length -Sum\\).Sum; \"dist/areas: $\\([math]::Round\\($areas/1KB\\)\\) KB - dist total: $\\([math]::Round\\($total/1KB\\)\\) KB\")",
       "PowerShell(Get-ChildItem public -File | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}})",
-      "PowerShell(git ls-files *)"
+      "PowerShell(git ls-files *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\({rechartsDep:p.dependencies&&p.dependencies.recharts, react:p.dependencies&&p.dependencies.react},null,2\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/recharts/package.json'\\).version\\)\")"
     ]
   }
 }
